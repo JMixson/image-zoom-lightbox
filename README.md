@@ -22,7 +22,7 @@ Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 1. Open Chrome and go to `chrome://extensions`.
 2. Enable **Developer mode**.
 3. Click **Load unpacked**.
-4. Select the extension project folder (the folder containing `manifest.json`).
+4. Select the "extension" folder (the folder containing `manifest.json`).
 
 ## Usage
 
