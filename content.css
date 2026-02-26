@@ -1,0 +1,144 @@
+﻿.iz-overlay,
+.iz-overlay * {
+  box-sizing: border-box;
+}
+
+.iz-overlay {
+  position: fixed;
+  inset: 0;
+  isolation: isolate;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.iz-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(1px);
+  opacity: 0;
+  transition: opacity 150ms ease;
+  z-index: 0;
+}
+
+.iz-overlay.iz-open .iz-backdrop {
+  opacity: 1;
+}
+
+.iz-overlay:focus,
+.iz-overlay:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.iz-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.iz-shell {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  background: #101010;
+  will-change: transform;
+}
+
+.iz-image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.iz-toolbar {
+  position: absolute;
+  left: 22px;
+  bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 3;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+.iz-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #1f1f1f;
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.25);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    opacity 120ms ease;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+.iz-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.3);
+}
+
+.iz-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.iz-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.iz-reset {
+  width: auto;
+  min-width: 54px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.iz-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  font-weight: 600;
+  z-index: 3;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iz-backdrop,
+  .iz-btn {
+    transition: none;
+  }
+}
