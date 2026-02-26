@@ -156,13 +156,19 @@
 
     shellEl.style.transform = `translate(-50%, -50%) translate(${translateX}px, ${translateY}px) scale(${scale})`;
 
+    const dragCursor =
+      scale > fitScale + 0.0001
+        ? isDragging
+          ? 'grabbing'
+          : 'grab'
+        : 'default';
+
     if (displayImgEl) {
-      displayImgEl.style.cursor =
-        scale > fitScale + 0.0001
-          ? isDragging
-            ? 'grabbing'
-            : 'grab'
-          : 'default';
+      displayImgEl.style.cursor = dragCursor;
+    }
+
+    if (stageEl) {
+      stageEl.style.cursor = dragCursor;
     }
 
     updateButtonState();
