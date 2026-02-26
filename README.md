@@ -6,7 +6,7 @@ Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 
 ## Preview
 
-![Extension preview](./screenshot.png)
+![Extension preview](demo.gif)
 
 ## Features
 
