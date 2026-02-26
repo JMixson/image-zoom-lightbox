@@ -2,7 +2,7 @@
 
 A Chrome extension that opens an Edge-style image lightbox when you press `Ctrl` twice while hovering an image.
 
-Created using GPT-5.3-Codex.
+Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 
 ## Preview
 
