@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="favicon.ico" />
+    <title>Image Zoom Lightbox Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="heading">
+        <h1>Control Button Colors</h1>
+        <p>
+          Customize toolbar and close button colors. Any invalid value is
+          ignored and falls back to the default.
+        </p>
+      </header>
+
+      <form id="theme-form" class="panel" novalidate>
+        <section
+          class="settings-group"
+          aria-labelledby="toolbar-controls-heading"
+        >
+          <h2 id="toolbar-controls-heading" class="settings-group-title">
+            Toolbar Buttons
+          </h2>
+          <div class="field-grid">
+            <div class="field">
+              <label for="buttonBg">Button background</label>
+              <div class="field-control">
+                <div class="color-display">
+                  <span
+                    class="color-swatch"
+                    data-swatch-for="buttonBg"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="color-value" data-rgba-for="buttonBg"></span>
+                  <input
+                    id="buttonBg"
+                    class="color-picker-native"
+                    type="color"
+                    name="buttonBg"
+                    aria-label="Button background color"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="buttonBg"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="buttonText">Button text</label>
+              <div class="field-control">
+                <div class="color-display">
+                  <span
+                    class="color-swatch"
+                    data-swatch-for="buttonText"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="color-value" data-rgba-for="buttonText"></span>
+                  <input
+                    id="buttonText"
+                    class="color-picker-native"
+                    type="color"
+                    name="buttonText"
+                    aria-label="Button text color"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="buttonText"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="buttonHoverBg">Button hover background</label>
+              <div class="field-control">
+                <div class="color-display">
+                  <span
+                    class="color-swatch"
+                    data-swatch-for="buttonHoverBg"
+                    aria-hidden="true"
+                  ></span>
+                  <span
+                    class="color-value"
+                    data-rgba-for="buttonHoverBg"
+                  ></span>
+                  <input
+                    id="buttonHoverBg"
+                    class="color-picker-native"
+                    type="color"
+                    name="buttonHoverBg"
+                    aria-label="Button hover background color"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="buttonHoverBg"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="buttonHoverText">Button hover text</label>
+              <div class="field-control">
+                <div class="color-display">
+                  <span
+                    class="color-swatch"
+                    data-swatch-for="buttonHoverText"
+                    aria-hidden="true"
+                  ></span>
+                  <span
+                    class="color-value"
+                    data-rgba-for="buttonHoverText"
+                  ></span>
+                  <input
+                    id="buttonHoverText"
+                    class="color-picker-native"
+                    type="color"
+                    name="buttonHoverText"
+                    aria-label="Button hover text color"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="buttonHoverText"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="buttonActiveBg">Button active background</label>
+              <div class="field-control">
+                <div class="color-display">
+                  <span
+                    class="color-swatch"
+                    data-swatch-for="buttonActiveBg"
+                    aria-hidden="true"
+                  ></span>
+                  <span
+                    class="color-value"
+                    data-rgba-for="buttonActiveBg"
+                  ></span>
+                  <input
+                    id="buttonActiveBg"
+                    class="color-picker-native"
+                    type="color"
+                    name="buttonActiveBg"
+                    aria-label="Button active background color"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="buttonActiveBg"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="buttonDisabledOpacity"
+                >Button disabled opacity (0 - 1)</label
+              >
+              <div class="field-control">
+                <input
+                  id="buttonDisabledOpacity"
+                  class="numeric-input"
+                  type="number"
+                  name="buttonDisabledOpacity"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                />
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="buttonDisabledOpacity"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          class="settings-group"
+          aria-labelledby="close-controls-heading"
+        >
+          <h2 id="close-controls-heading" class="settings-group-title">
+            Close Button
+          </h2>
+          <div class="field-grid">
+            <div class="field">
+              <label for="closeButtonBg">Close button background</label>
+              <div class="field-control">
+                <div class="color-display">
+                  <span
+                    class="color-swatch"
+                    data-swatch-for="closeButtonBg"
+                    aria-hidden="true"
+                  ></span>
+                  <span
+                    class="color-value"
+                    data-rgba-for="closeButtonBg"
+                  ></span>
+                  <input
+                    id="closeButtonBg"
+                    class="color-picker-native"
+                    type="color"
+                    name="closeButtonBg"
+                    aria-label="Close button background color"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="closeButtonBg"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="closeButtonText">Close button text</label>
+              <div class="field-control">
+                <div class="color-display">
+                  <span
+                    class="color-swatch"
+                    data-swatch-for="closeButtonText"
+                    aria-hidden="true"
+                  ></span>
+                  <span
+                    class="color-value"
+                    data-rgba-for="closeButtonText"
+                  ></span>
+                  <input
+                    id="closeButtonText"
+                    class="color-picker-native"
+                    type="color"
+                    name="closeButtonText"
+                    aria-label="Close button text color"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="closeButtonText"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="closeButtonHoverBg">Close hover background</label>
+              <div class="field-control">
+                <div class="color-display">
+                  <span
+                    class="color-swatch"
+                    data-swatch-for="closeButtonHoverBg"
+                    aria-hidden="true"
+                  ></span>
+                  <span
+                    class="color-value"
+                    data-rgba-for="closeButtonHoverBg"
+                  ></span>
+                  <input
+                    id="closeButtonHoverBg"
+                    class="color-picker-native"
+                    type="color"
+                    name="closeButtonHoverBg"
+                    aria-label="Close hover background color"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="closeButtonHoverBg"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="closeButtonHoverText">Close hover text</label>
+              <div class="field-control">
+                <div class="color-display">
+                  <span
+                    class="color-swatch"
+                    data-swatch-for="closeButtonHoverText"
+                    aria-hidden="true"
+                  ></span>
+                  <span
+                    class="color-value"
+                    data-rgba-for="closeButtonHoverText"
+                  ></span>
+                  <input
+                    id="closeButtonHoverText"
+                    class="color-picker-native"
+                    type="color"
+                    name="closeButtonHoverText"
+                    aria-label="Close hover text color"
+                  />
+                </div>
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="closeButtonHoverText"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" id="reset-defaults" class="btn">
+            Reset defaults
+          </button>
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+        </div>
+      </form>
+
+      <section class="panel preview-panel">
+        <h2>Preview</h2>
+        <div id="preview" class="preview">
+          <div class="preview-toolbar">
+            <button class="preview-btn">-</button>
+            <button class="preview-btn">+</button>
+            <button class="preview-btn preview-reset">Fit</button>
+          </div>
+          <button class="preview-btn preview-close">x</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>
