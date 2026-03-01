@@ -1,0 +1,45 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 190px;
+  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+}
+
+.menu {
+  overflow: hidden;
+  background: #fff;
+}
+
+.menu-item {
+  width: 100%;
+  border: 0;
+  background: #fff;
+  color: #1f2937;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  font-size: 16px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: #f5f7ff;
+}
+
+.menu-item:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.menu-icon {
+  width: 16px;
+  height: 16px;
+  position: relative;
+  flex: 0 0 16px;
+}
