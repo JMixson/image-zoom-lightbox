@@ -11,6 +11,24 @@
   const OVERLAY_Z_INDEX = 2147483000;
   const VIEWPORT_PADDING_X = 96;
   const VIEWPORT_PADDING_Y = 96;
+  const DEFAULT_THEME_SETTINGS = Object.freeze({
+    buttonBg: 'rgba(255, 255, 255, 0.13)',
+    buttonText: 'rgba(255, 255, 255, 0.92)',
+    buttonHoverBg: 'rgba(255, 255, 255, 0.22)',
+    buttonHoverText: '#fff',
+    buttonActiveBg: 'rgba(255, 255, 255, 0.1)',
+    buttonDisabledOpacity: 0.28,
+    closeButtonBg: 'rgba(18, 18, 22, 0.68)',
+    closeButtonText: 'rgba(255, 255, 255, 0.75)',
+    closeButtonHoverBg: 'rgba(255, 255, 255, 0.14)',
+    closeButtonHoverText: '#fff',
+  });
+  const DEFAULT_RESET_THEME = Object.freeze({
+    text: 'rgba(255, 255, 255, 0.75)',
+    hoverBg: 'rgba(255, 255, 255, 0.12)',
+    hoverText: '#fff',
+  });
+  const THEME_SETTING_KEYS = Object.keys(DEFAULT_THEME_SETTINGS);
 
   let lastCtrlTs = 0;
   let lastPointerClientX = 0;
@@ -46,8 +64,183 @@
   let zoomOutBtnEl = null;
   let resetBtnEl = null;
   let overlayAbortController = null;
+  let currentThemeSettings = { ...DEFAULT_THEME_SETTINGS };
+  let themeSettingsLoadPromise = null;
 
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+  const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+
+  function isStorageSyncAvailable() {
+    return typeof chrome !== 'undefined' && !!chrome.storage?.sync;
+  }
+
+  function isValidCssColor(value) {
+    if (typeof value !== 'string') {
+      return false;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return false;
+    }
+
+    return typeof CSS !== 'undefined' && typeof CSS.supports === 'function'
+      ? CSS.supports('color', trimmed)
+      : false;
+  }
+
+  function sanitizeThemeSettings(rawSettings) {
+    const raw =
+      rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
+    const sanitized = { ...DEFAULT_THEME_SETTINGS };
+    const colorKeys = [
+      'buttonBg',
+      'buttonText',
+      'buttonHoverBg',
+      'buttonHoverText',
+      'buttonActiveBg',
+      'closeButtonBg',
+      'closeButtonText',
+      'closeButtonHoverBg',
+      'closeButtonHoverText',
+    ];
+
+    for (const key of colorKeys) {
+      if (hasOwn(raw, key) && isValidCssColor(raw[key])) {
+        sanitized[key] = raw[key].trim();
+      }
+    }
+
+    if (hasOwn(raw, 'buttonDisabledOpacity')) {
+      const numericOpacity = Number(raw.buttonDisabledOpacity);
+      if (Number.isFinite(numericOpacity)) {
+        sanitized.buttonDisabledOpacity = clamp(numericOpacity, 0, 1);
+      }
+    }
+
+    return sanitized;
+  }
+
+  function applyThemeSettings(targetOverlayEl, settings) {
+    if (!targetOverlayEl || !settings) {
+      return;
+    }
+
+    const resetText =
+      settings.buttonText === DEFAULT_THEME_SETTINGS.buttonText
+        ? DEFAULT_RESET_THEME.text
+        : settings.buttonText;
+    const resetHoverBg =
+      settings.buttonHoverBg === DEFAULT_THEME_SETTINGS.buttonHoverBg
+        ? DEFAULT_RESET_THEME.hoverBg
+        : settings.buttonHoverBg;
+    const resetHoverText =
+      settings.buttonHoverText === DEFAULT_THEME_SETTINGS.buttonHoverText
+        ? DEFAULT_RESET_THEME.hoverText
+        : settings.buttonHoverText;
+
+    targetOverlayEl.style.setProperty('--iz-button-bg', settings.buttonBg);
+    targetOverlayEl.style.setProperty('--iz-button-text', settings.buttonText);
+    targetOverlayEl.style.setProperty(
+      '--iz-button-hover-bg',
+      settings.buttonHoverBg,
+    );
+    targetOverlayEl.style.setProperty(
+      '--iz-button-hover-text',
+      settings.buttonHoverText,
+    );
+    targetOverlayEl.style.setProperty(
+      '--iz-button-active-bg',
+      settings.buttonActiveBg,
+    );
+    targetOverlayEl.style.setProperty(
+      '--iz-button-disabled-opacity',
+      String(settings.buttonDisabledOpacity),
+    );
+    targetOverlayEl.style.setProperty('--iz-close-bg', settings.closeButtonBg);
+    targetOverlayEl.style.setProperty(
+      '--iz-close-text',
+      settings.closeButtonText,
+    );
+    targetOverlayEl.style.setProperty(
+      '--iz-close-hover-bg',
+      settings.closeButtonHoverBg,
+    );
+    targetOverlayEl.style.setProperty(
+      '--iz-close-hover-text',
+      settings.closeButtonHoverText,
+    );
+    targetOverlayEl.style.setProperty('--iz-reset-text', resetText);
+    targetOverlayEl.style.setProperty('--iz-reset-hover-bg', resetHoverBg);
+    targetOverlayEl.style.setProperty('--iz-reset-hover-text', resetHoverText);
+  }
+
+  function getThemeStorageValues() {
+    return new Promise(resolve => {
+      if (!isStorageSyncAvailable()) {
+        resolve({});
+        return;
+      }
+
+      chrome.storage.sync.get(THEME_SETTING_KEYS, items => {
+        if (chrome.runtime?.lastError) {
+          resolve({});
+          return;
+        }
+
+        resolve(items || {});
+      });
+    });
+  }
+
+  function loadThemeSettings() {
+    if (themeSettingsLoadPromise) {
+      return themeSettingsLoadPromise;
+    }
+
+    themeSettingsLoadPromise = getThemeStorageValues()
+      .then(stored => {
+        currentThemeSettings = sanitizeThemeSettings(stored);
+        if (overlayEl) {
+          applyThemeSettings(overlayEl, currentThemeSettings);
+        }
+        return currentThemeSettings;
+      })
+      .catch(() => currentThemeSettings);
+
+    return themeSettingsLoadPromise;
+  }
+
+  function handleStorageThemeUpdates(changes, areaName) {
+    if (areaName !== 'sync' || !changes || typeof changes !== 'object') {
+      return;
+    }
+
+    const patch = {};
+    let hasThemeChange = false;
+
+    for (const key of THEME_SETTING_KEYS) {
+      if (!hasOwn(changes, key)) {
+        continue;
+      }
+
+      hasThemeChange = true;
+      patch[key] = changes[key]?.newValue;
+    }
+
+    if (!hasThemeChange) {
+      return;
+    }
+
+    currentThemeSettings = sanitizeThemeSettings({
+      ...currentThemeSettings,
+      ...patch,
+    });
+
+    if (overlayEl) {
+      applyThemeSettings(overlayEl, currentThemeSettings);
+    }
+  }
 
   function getViewportBounds() {
     return {
@@ -348,6 +541,7 @@
     overlayEl.setAttribute('role', 'dialog');
     overlayEl.setAttribute('aria-modal', 'true');
     overlayEl.style.zIndex = String(OVERLAY_Z_INDEX);
+    applyThemeSettings(overlayEl, currentThemeSettings);
 
     backdropEl = document.createElement('div');
     backdropEl.className = 'iz-backdrop';
@@ -582,4 +776,10 @@
 
   document.addEventListener('pointermove', onGlobalPointerMove, true);
   document.addEventListener('keydown', onGlobalKeyDown, true);
+
+  if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+    chrome.storage.onChanged.addListener(handleStorageThemeUpdates);
+  }
+
+  void loadThemeSettings();
 })();

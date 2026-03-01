@@ -8,6 +8,19 @@
   inset: 0;
   isolation: isolate;
   font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  --iz-button-bg: rgba(255, 255, 255, 0.13);
+  --iz-button-text: rgba(255, 255, 255, 0.92);
+  --iz-button-hover-bg: rgba(255, 255, 255, 0.22);
+  --iz-button-hover-text: #fff;
+  --iz-button-active-bg: rgba(255, 255, 255, 0.1);
+  --iz-button-disabled-opacity: 0.28;
+  --iz-close-bg: rgba(18, 18, 22, 0.68);
+  --iz-close-text: rgba(255, 255, 255, 0.75);
+  --iz-close-hover-bg: rgba(255, 255, 255, 0.14);
+  --iz-close-hover-text: #fff;
+  --iz-reset-text: rgba(255, 255, 255, 0.75);
+  --iz-reset-hover-bg: rgba(255, 255, 255, 0.12);
+  --iz-reset-hover-text: #fff;
 }
 
 /* ── Backdrop ─────────────────────────────────────────── */
@@ -112,8 +125,8 @@
   border-radius: 999px;
   width: 38px;
   height: 38px;
-  background: rgba(255, 255, 255, 0.13);
-  color: rgba(255, 255, 255, 0.92);
+  background: var(--iz-button-bg);
+  color: var(--iz-button-text);
   font-size: 17px;
   line-height: 1;
   cursor: pointer;
@@ -128,19 +141,19 @@
 }
 
 .iz-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
+  background: var(--iz-button-hover-bg);
+  color: var(--iz-button-hover-text);
   transform: scale(1.1);
 }
 
 .iz-btn:active:not(:disabled) {
   transform: scale(0.94);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--iz-button-active-bg);
 }
 
 .iz-btn:disabled {
   cursor: default;
-  opacity: 0.28 !important;
+  opacity: var(--iz-button-disabled-opacity) !important;
 }
 
 /* ── Reset button ─────────────────────────────────────── */
@@ -152,13 +165,13 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--iz-reset-text);
   border-radius: 999px;
 }
 
 .iz-reset:hover:not(:disabled) {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--iz-reset-hover-text);
+  background: var(--iz-reset-hover-bg);
 }
 
 /* ── Close button ─────────────────────────────────────── */
@@ -171,11 +184,11 @@
   font-size: 16px;
   font-weight: 500;
   z-index: 3;
-  background: rgba(18, 18, 22, 0.68);
+  background: var(--iz-close-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--iz-close-text);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   opacity: 1 !important;
   filter: none !important;
@@ -183,8 +196,8 @@
 }
 
 .iz-close:hover:not(:disabled) {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.14);
+  color: var(--iz-close-hover-text);
+  background: var(--iz-close-hover-bg);
   transform: scale(1.08);
 }
 
