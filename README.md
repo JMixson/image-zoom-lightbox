@@ -14,15 +14,25 @@ Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 - Zoom controls (`-`, `+`, `Fit`)
 - Mouse wheel zoom around cursor
 - Drag-to-pan when zoomed in
+- Color customization for toolbar and close button styles (via Options)
 - Close with `Esc` or click outside
 - Runs on most `http://` and `https://` pages
+
+<table>
+  <tbody>
+    <tr>
+        <td><img alt="Lightbox Feature Screenshot" src="/lightbox.png" /></td> 
+        <td><img alt="Options Screen Screenshot" src="/options.png" /></td>    
+    </tr>
+  </tbody>
+</table>
 
 ## Load Unpacked
 
 1. Open Chrome and go to `chrome://extensions`.
 2. Enable **Developer mode**.
 3. Click **Load unpacked**.
-4. Select the "extension" folder (the folder containing `manifest.json`).
+4. Select the `extension` folder (the folder containing `manifest.json`).
 
 ## Usage
 
@@ -34,9 +44,17 @@ Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 
 ## Project Structure
 
-- `manifest.json`: MV3 extension manifest
-- `content.js`: trigger detection, lightbox logic, zoom/pan behavior
-- `content.css`: overlay and control styling
+Files within the `extension` folder
+
+- `manifest.json`: MV3 extension manifest (permissions, content scripts, popup, and options page setup)
+- `content.js`: Trigger detection, lightbox behavior, and zoom/pan interactions
+- `content.css`: Lightbox overlay and in-page control styling
+- `popup.html`: Popup UI markup
+- `popup.css`: Popup UI styling
+- `popup.js`: Popup behavior and controls
+- `options.html`: Options page markup
+- `options.css`: Options page styling
+- `options.js`: Options page logic and settings handling
 
 ## Limitations
 
