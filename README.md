@@ -6,7 +6,7 @@ Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 
 ## Preview
 
-![Extension preview](demo.gif)
+![Extension preview](images/demo.gif)
 
 ## Features
 
@@ -21,8 +21,12 @@ Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 <table>
   <tbody>
     <tr>
-        <td><img alt="Lightbox Feature Screenshot" src="/lightbox.png" /></td> 
-        <td><img alt="Options Screen Screenshot" src="/options.png" /></td>    
+        <td><img alt="Lightbox Feature Screenshot" src="/images/default-lightbox.jpg" /></td> 
+        <td><img alt="Zoomed In Lightbox Feature Screenshot" src="/images/zoomed-in-lightbox.jpg" /></td>    
+    </tr>
+    <tr>
+        <td><img alt="Options Screen Screenshot" src="/images/default-options.jpg" /></td> 
+        <td><img alt="Customized Lightbox Controls Screenshot" src="/images/customized-lightbox-green.jpg" /></td>   
     </tr>
   </tbody>
 </table>
