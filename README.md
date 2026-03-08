@@ -12,9 +12,11 @@ Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 
 - Double-click `Ctrl` activation on hovered images
 - Zoom controls (`-`, `+`, `Fit`)
+- Toggle toolbar/close controls with `h` while lightbox is open
 - Mouse wheel zoom around cursor
 - Drag-to-pan when zoomed in
 - Color customization for toolbar and close button styles (via Options)
+- Customizable controls-toggle shortcut (via Options, resettable to default)
 - Close with `Esc` or click outside
 - Runs on most `http://` and `https://` pages
 
@@ -44,7 +46,8 @@ Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 2. Press `Ctrl` twice quickly.
 3. Zoom with the mouse wheel or toolbar buttons.
 4. Drag to pan when zoomed.
-5. Press `Esc` (or click outside) to close.
+5. Press `h` to hide/show the toolbar and close button.
+6. Press `Esc` (or click outside) to close.
 
 ## Project Structure
 

@@ -102,6 +102,9 @@
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.35),
     0 1px 0 rgba(255, 255, 255, 0.07) inset;
+  transition:
+    opacity 140ms ease,
+    transform 180ms ease;
   opacity: 1 !important;
   filter: none !important;
   mix-blend-mode: normal !important;
@@ -190,6 +193,12 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--iz-close-text);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 150ms ease,
+    opacity 140ms ease;
   opacity: 1 !important;
   filter: none !important;
   mix-blend-mode: normal !important;
@@ -201,9 +210,24 @@
   transform: scale(1.08);
 }
 
+.iz-overlay.iz-controls-hidden .iz-toolbar,
+.iz-overlay.iz-controls-hidden .iz-close {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+.iz-overlay.iz-controls-hidden .iz-toolbar {
+  transform: translateX(-50%) translateY(14px);
+}
+
+.iz-overlay.iz-controls-hidden .iz-close {
+  transform: scale(0.88);
+}
+
 /* ── Reduced motion ───────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .iz-backdrop,
+  .iz-toolbar,
   .iz-btn,
   .iz-close {
     transition: none;

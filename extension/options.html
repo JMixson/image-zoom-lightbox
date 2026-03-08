@@ -10,10 +10,10 @@
   <body>
     <main class="page">
       <header class="heading">
-        <h1>Control Button Colors</h1>
+        <h1>Image Zoom Lightbox Settings</h1>
         <p>
-          Customize toolbar and close button colors. Any invalid value is
-          ignored and falls back to the default.
+          Customize overlay colors and keyboard behavior. Any invalid value is
+          ignored and falls back to the default settings.
         </p>
       </header>
 
@@ -323,6 +323,41 @@
                   Reset
                 </button>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="keyboard-heading">
+          <h2 id="keyboard-heading" class="settings-group-title">
+            Keyboard
+          </h2>
+          <div class="field-grid">
+            <div class="field">
+              <label for="toggleControlsKey">Toggle controls shortcut</label>
+              <div class="field-control">
+                <input
+                  id="toggleControlsKey"
+                  class="shortcut-input"
+                  type="text"
+                  name="toggleControlsKey"
+                  maxlength="1"
+                  autocomplete="off"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  aria-label="Toggle controls shortcut key"
+                />
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="toggleControlsKey"
+                >
+                  Reset
+                </button>
+              </div>
+              <p class="field-help">
+                Press this key while the zoom overlay is open to hide or show
+                the toolbar and close button.
+              </p>
             </div>
           </div>
         </section>

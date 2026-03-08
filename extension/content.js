@@ -23,12 +23,17 @@
     closeButtonHoverBg: 'rgba(255, 255, 255, 0.14)',
     closeButtonHoverText: '#fff',
   });
+  const DEFAULT_SHORTCUT_SETTINGS = Object.freeze({
+    toggleControlsKey: 'h',
+  });
   const DEFAULT_RESET_THEME = Object.freeze({
     text: 'rgba(255, 255, 255, 0.75)',
     hoverBg: 'rgba(255, 255, 255, 0.12)',
     hoverText: '#fff',
   });
   const THEME_SETTING_KEYS = Object.keys(DEFAULT_THEME_SETTINGS);
+  const SHORTCUT_SETTING_KEYS = Object.keys(DEFAULT_SHORTCUT_SETTINGS);
+  const STORED_SETTING_KEYS = [...THEME_SETTING_KEYS, ...SHORTCUT_SETTING_KEYS];
 
   let lastCtrlTs = 0;
   let lastPointerClientX = 0;
@@ -60,11 +65,14 @@
   let shellEl = null;
   let displayImgEl = null;
   let closeBtnEl = null;
+  let toolbarEl = null;
   let zoomInBtnEl = null;
   let zoomOutBtnEl = null;
   let resetBtnEl = null;
   let overlayAbortController = null;
+  let controlsHidden = false;
   let currentThemeSettings = { ...DEFAULT_THEME_SETTINGS };
+  let currentToggleControlsKey = DEFAULT_SHORTCUT_SETTINGS.toggleControlsKey;
   let themeSettingsLoadPromise = null;
 
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
@@ -121,6 +129,32 @@
     return sanitized;
   }
 
+  function normalizeShortcutKey(value) {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return '';
+    }
+
+    return trimmed.slice(0, 1).toLowerCase();
+  }
+
+  function sanitizeShortcutSettings(rawSettings) {
+    const raw =
+      rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
+    const normalized = hasOwn(raw, 'toggleControlsKey')
+      ? normalizeShortcutKey(raw.toggleControlsKey)
+      : '';
+
+    return {
+      toggleControlsKey:
+        normalized || DEFAULT_SHORTCUT_SETTINGS.toggleControlsKey,
+    };
+  }
+
   function applyThemeSettings(targetOverlayEl, settings) {
     if (!targetOverlayEl || !settings) {
       return;
@@ -175,14 +209,14 @@
     targetOverlayEl.style.setProperty('--iz-reset-hover-text', resetHoverText);
   }
 
-  function getThemeStorageValues() {
+  function getStoredSettingsValues() {
     return new Promise(resolve => {
       if (!isStorageSyncAvailable()) {
         resolve({});
         return;
       }
 
-      chrome.storage.sync.get(THEME_SETTING_KEYS, items => {
+      chrome.storage.sync.get(STORED_SETTING_KEYS, items => {
         if (chrome.runtime?.lastError) {
           resolve({});
           return;
@@ -198,9 +232,11 @@
       return themeSettingsLoadPromise;
     }
 
-    themeSettingsLoadPromise = getThemeStorageValues()
+    themeSettingsLoadPromise = getStoredSettingsValues()
       .then(stored => {
         currentThemeSettings = sanitizeThemeSettings(stored);
+        const shortcutSettings = sanitizeShortcutSettings(stored);
+        currentToggleControlsKey = shortcutSettings.toggleControlsKey;
         if (overlayEl) {
           applyThemeSettings(overlayEl, currentThemeSettings);
         }
@@ -218,6 +254,8 @@
 
     const patch = {};
     let hasThemeChange = false;
+    let hasShortcutChange = false;
+    let updatedShortcutKey = null;
 
     for (const key of THEME_SETTING_KEYS) {
       if (!hasOwn(changes, key)) {
@@ -228,18 +266,48 @@
       patch[key] = changes[key]?.newValue;
     }
 
-    if (!hasThemeChange) {
+    for (const key of SHORTCUT_SETTING_KEYS) {
+      if (!hasOwn(changes, key)) {
+        continue;
+      }
+
+      hasShortcutChange = true;
+      updatedShortcutKey = changes[key]?.newValue;
+    }
+
+    if (hasThemeChange) {
+      currentThemeSettings = sanitizeThemeSettings({
+        ...currentThemeSettings,
+        ...patch,
+      });
+
+      if (overlayEl) {
+        applyThemeSettings(overlayEl, currentThemeSettings);
+      }
+    }
+
+    if (hasShortcutChange) {
+      currentToggleControlsKey = sanitizeShortcutSettings({
+        toggleControlsKey: updatedShortcutKey,
+      }).toggleControlsKey;
+    }
+  }
+
+  function applyControlsVisibility() {
+    if (!overlayEl) {
       return;
     }
 
-    currentThemeSettings = sanitizeThemeSettings({
-      ...currentThemeSettings,
-      ...patch,
-    });
+    overlayEl.classList.toggle('iz-controls-hidden', controlsHidden);
+  }
 
-    if (overlayEl) {
-      applyThemeSettings(overlayEl, currentThemeSettings);
+  function toggleControlsVisibility() {
+    if (!overlayOpen) {
+      return;
     }
+
+    controlsHidden = !controlsHidden;
+    applyControlsVisibility();
   }
 
   function getViewportBounds() {
@@ -501,6 +569,7 @@
     activeImageSrc = null;
     isDragging = false;
     suppressBackdropClick = false;
+    controlsHidden = false;
 
     if (overlayAbortController) {
       overlayAbortController.abort();
@@ -526,6 +595,7 @@
     shellEl = null;
     displayImgEl = null;
     closeBtnEl = null;
+    toolbarEl = null;
     zoomInBtnEl = null;
     zoomOutBtnEl = null;
     resetBtnEl = null;
@@ -566,7 +636,7 @@
     closeBtnEl.setAttribute('aria-label', 'Close image zoom');
     closeBtnEl.textContent = 'x';
 
-    const toolbarEl = document.createElement('div');
+    toolbarEl = document.createElement('div');
     toolbarEl.className = 'iz-toolbar';
 
     zoomOutBtnEl = document.createElement('button');
@@ -598,6 +668,7 @@
 
     const mountNode = document.body || document.documentElement;
     mountNode.appendChild(overlayEl);
+    applyControlsVisibility();
 
     window.requestAnimationFrame(() => {
       if (overlayEl) {
@@ -725,6 +796,7 @@
 
     activeImageSrc = src;
     overlayOpen = true;
+    controlsHidden = false;
 
     buildOverlay(img.alt || '');
   }
@@ -745,7 +817,37 @@
     hoveredImage = candidate && isVisibleImage(candidate) ? candidate : null;
   }
 
+  function isEditableTarget(target) {
+    if (!(target instanceof Element)) {
+      return false;
+    }
+
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement
+    ) {
+      return true;
+    }
+
+    return target.isContentEditable;
+  }
+
+  function isToggleControlsKeyEvent(event) {
+    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) {
+      return false;
+    }
+
+    const key = normalizeShortcutKey(event.key);
+    return !!key && key === currentToggleControlsKey;
+  }
+
   function onGlobalKeyDown(event) {
+    if (overlayOpen && isToggleControlsKeyEvent(event) && !isEditableTarget(event.target)) {
+      event.preventDefault();
+      toggleControlsVisibility();
+      return;
+    }
+
     if (overlayOpen && event.key === 'Escape') {
       event.preventDefault();
       closeOverlay();

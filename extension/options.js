@@ -13,12 +13,21 @@
     closeButtonHoverBg: 'rgba(255, 255, 255, 0.14)',
     closeButtonHoverText: '#fff',
   });
+  const DEFAULT_SHORTCUT_SETTINGS = Object.freeze({
+    toggleControlsKey: 'h',
+  });
+  const DEFAULT_SETTINGS = Object.freeze({
+    ...DEFAULT_THEME_SETTINGS,
+    ...DEFAULT_SHORTCUT_SETTINGS,
+  });
   const DEFAULT_RESET_THEME = Object.freeze({
     text: 'rgba(255, 255, 255, 0.75)',
     hoverBg: 'rgba(255, 255, 255, 0.12)',
     hoverText: '#fff',
   });
   const THEME_SETTING_KEYS = Object.keys(DEFAULT_THEME_SETTINGS);
+  const SHORTCUT_SETTING_KEYS = Object.keys(DEFAULT_SHORTCUT_SETTINGS);
+  const STORED_SETTING_KEYS = [...THEME_SETTING_KEYS, ...SHORTCUT_SETTING_KEYS];
   const SETTING_LABELS = Object.freeze({
     buttonBg: 'Button background',
     buttonText: 'Button text',
@@ -30,6 +39,7 @@
     closeButtonText: 'Close button text',
     closeButtonHoverBg: 'Close hover background',
     closeButtonHoverText: 'Close hover text',
+    toggleControlsKey: 'Toggle controls shortcut',
   });
   const COLOR_KEYS = [
     'buttonBg',
@@ -220,18 +230,57 @@
     return sanitized;
   }
 
+  function normalizeShortcutKeyInput(value) {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return '';
+    }
+
+    return trimmed.slice(0, 1).toLowerCase();
+  }
+
+  function sanitizeShortcutKey(value) {
+    if (typeof value !== 'string') {
+      return DEFAULT_SHORTCUT_SETTINGS.toggleControlsKey;
+    }
+
+    return (
+      normalizeShortcutKeyInput(value) ||
+      DEFAULT_SHORTCUT_SETTINGS.toggleControlsKey
+    );
+  }
+
+  function sanitizeShortcutSettings(rawSettings) {
+    const raw =
+      rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
+    return {
+      toggleControlsKey: sanitizeShortcutKey(raw.toggleControlsKey),
+    };
+  }
+
+  function sanitizeAllSettings(rawSettings) {
+    return {
+      ...sanitizeThemeSettings(rawSettings),
+      ...sanitizeShortcutSettings(rawSettings),
+    };
+  }
+
   function hasStorageSync() {
     return typeof chrome !== 'undefined' && !!chrome.storage?.sync;
   }
 
-  function getStoredThemeSettings() {
+  function getStoredSettings() {
     return new Promise(resolve => {
       if (!hasStorageSync()) {
         resolve({});
         return;
       }
 
-      chrome.storage.sync.get(THEME_SETTING_KEYS, items => {
+      chrome.storage.sync.get(STORED_SETTING_KEYS, items => {
         if (chrome.runtime?.lastError) {
           resolve({});
           return;
@@ -242,7 +291,7 @@
     });
   }
 
-  function saveThemeSettings(settings) {
+  function saveSettings(settings) {
     return new Promise(resolve => {
       if (!hasStorageSync()) {
         resolve(false);
@@ -258,7 +307,7 @@
   function readFormValues() {
     const raw = {};
 
-    for (const key of THEME_SETTING_KEYS) {
+    for (const key of STORED_SETTING_KEYS) {
       const field = formEl?.elements?.namedItem(key);
       if (!field) {
         continue;
@@ -280,6 +329,11 @@
         continue;
       }
 
+      if (key === 'toggleControlsKey') {
+        raw[key] = String(field.value || '');
+        continue;
+      }
+
       raw[key] = String(field.value || '');
     }
 
@@ -287,7 +341,7 @@
   }
 
   function writeFormValues(settings) {
-    for (const key of THEME_SETTING_KEYS) {
+    for (const key of STORED_SETTING_KEYS) {
       const field = formEl?.elements?.namedItem(key);
       if (!field) {
         continue;
@@ -303,6 +357,11 @@
         continue;
       }
 
+      if (key === 'toggleControlsKey') {
+        field.value = sanitizeShortcutKey(String(settings[key] ?? ''));
+        continue;
+      }
+
       field.value = settings[key];
     }
   }
@@ -315,7 +374,10 @@
 
     const field = formEl?.elements?.namedItem(key);
     if (field) {
-      field.value = String(value);
+      field.value =
+        key === 'toggleControlsKey'
+          ? sanitizeShortcutKey(String(value))
+          : String(value);
     }
   }
 
@@ -388,15 +450,22 @@
       return;
     }
 
-    const stored = await getStoredThemeSettings();
-    const initial = sanitizeThemeSettings(stored);
+    const stored = await getStoredSettings();
+    const initial = sanitizeAllSettings(stored);
 
     writeFormValues(initial);
     applyPreview(initial);
     updateColorDisplays(initial);
 
-    formEl.addEventListener('input', () => {
-      const previewSettings = sanitizeThemeSettings(readFormValues());
+    formEl.addEventListener('input', event => {
+      if (
+        event.target instanceof HTMLInputElement &&
+        event.target.name === 'toggleControlsKey'
+      ) {
+        event.target.value = normalizeShortcutKeyInput(event.target.value);
+      }
+
+      const previewSettings = sanitizeAllSettings(readFormValues());
       applyPreview(previewSettings);
       updateColorDisplays(previewSettings);
     });
@@ -404,8 +473,8 @@
     formEl.addEventListener('submit', async event => {
       event.preventDefault();
       const raw = readFormValues();
-      const sanitized = sanitizeThemeSettings(raw);
-      const saved = await saveThemeSettings(sanitized);
+      const sanitized = sanitizeAllSettings(raw);
+      const saved = await saveSettings(sanitized);
 
       if (!saved) {
         setStatus('Failed to save settings.', true);
@@ -428,19 +497,19 @@
       }
 
       const key = resetTrigger.getAttribute('data-reset-key');
-      if (!key || !hasOwn(DEFAULT_THEME_SETTINGS, key)) {
+      if (!key || !hasOwn(DEFAULT_SETTINGS, key)) {
         return;
       }
 
-      const resetValue = DEFAULT_THEME_SETTINGS[key];
-      const saved = await saveThemeSettings({ [key]: resetValue });
+      const resetValue = DEFAULT_SETTINGS[key];
+      const saved = await saveSettings({ [key]: resetValue });
       if (!saved) {
         setStatus('Failed to reset setting.', true);
         return;
       }
 
       setFieldValue(key, resetValue);
-      const updatedSettings = sanitizeThemeSettings(readFormValues());
+      const updatedSettings = sanitizeAllSettings(readFormValues());
       applyPreview(updatedSettings);
       updateColorDisplays(updatedSettings);
       const label = SETTING_LABELS[key] || 'Setting';
@@ -448,8 +517,8 @@
     });
 
     resetBtnEl.addEventListener('click', async () => {
-      const defaults = { ...DEFAULT_THEME_SETTINGS };
-      const saved = await saveThemeSettings(defaults);
+      const defaults = { ...DEFAULT_SETTINGS };
+      const saved = await saveSettings(defaults);
 
       if (!saved) {
         setStatus('Failed to reset settings.', true);
