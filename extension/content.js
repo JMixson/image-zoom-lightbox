@@ -8,9 +8,11 @@
   const DOUBLE_CTRL_MS = 350;
   const ZOOM_STEP = 1.1;
   const MAX_ZOOM_MULTIPLIER = 8;
+  const MAX_IMAGE_ALT_LENGTH = 300;
   const OVERLAY_Z_INDEX = 2147483000;
   const VIEWPORT_PADDING_X = 96;
   const VIEWPORT_PADDING_Y = 96;
+  const SAFE_IMAGE_PROTOCOLS = new Set(['http:', 'https:', 'data:']);
   const DEFAULT_THEME_SETTINGS = Object.freeze({
     buttonBg: 'rgba(255, 255, 255, 0.13)',
     buttonText: 'rgba(255, 255, 255, 0.92)',
@@ -247,7 +249,10 @@
         }
         return currentThemeSettings;
       })
-      .catch(() => currentThemeSettings);
+      .catch(() => {
+        themeSettingsLoadPromise = null;
+        return currentThemeSettings;
+      });
 
     return themeSettingsLoadPromise;
   }
@@ -354,7 +359,32 @@
     }
 
     const src = (img.currentSrc || img.src || '').trim();
-    return src.length > 0 ? src : null;
+    if (!src) {
+      return null;
+    }
+
+    try {
+      const url = new URL(src, window.location.href);
+      if (!SAFE_IMAGE_PROTOCOLS.has(url.protocol)) {
+        return null;
+      }
+
+      if (url.protocol === 'data:' && !src.toLowerCase().startsWith('data:image/')) {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+
+    return src;
+  }
+
+  function sanitizeImageAltText(value) {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    return value.slice(0, MAX_IMAGE_ALT_LENGTH);
   }
 
   function rectContainsPoint(rect, x, y) {
@@ -874,7 +904,7 @@
     overlayOpen = true;
     controlsHidden = currentHideControlsByDefault;
 
-    buildOverlay(img.alt || '');
+    buildOverlay(sanitizeImageAltText(img.alt));
   }
 
   function onGlobalPointerMove(event) {
