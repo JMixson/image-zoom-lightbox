@@ -60,7 +60,6 @@
   const resetBtnEl = document.getElementById('reset-defaults');
   const statusEl = document.getElementById('status');
   const previewEl = document.getElementById('preview');
-  const colorParserCtx = document.createElement('canvas').getContext('2d');
   const colorAlphaByKey = {};
 
   const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
@@ -92,52 +91,128 @@
     };
   }
 
-  function parseCssColor(value) {
-    if (!colorParserCtx || typeof value !== 'string' || !isValidCssColor(value)) {
+  function parseCssChannel(value) {
+    if (typeof value !== 'string') {
       return null;
     }
 
-    colorParserCtx.fillStyle = '#000000';
-    colorParserCtx.fillStyle = value.trim();
-    const normalized = colorParserCtx.fillStyle;
-    if (!normalized) {
+    const trimmed = value.trim();
+    if (!trimmed) {
       return null;
     }
 
-    const hexMatch = normalized.match(/^#([0-9a-f]{6})$/i);
-    if (hexMatch) {
-      return {
-        r: Number.parseInt(hexMatch[1].slice(0, 2), 16),
-        g: Number.parseInt(hexMatch[1].slice(2, 4), 16),
-        b: Number.parseInt(hexMatch[1].slice(4, 6), 16),
-        a: 1,
-      };
+    if (trimmed.endsWith('%')) {
+      const numeric = Number.parseFloat(trimmed.slice(0, -1));
+      return Number.isFinite(numeric)
+        ? clamp((numeric / 100) * 255, 0, 255)
+        : null;
     }
 
-    const rgbMatch = normalized.match(/^rgba?\((.+)\)$/i);
+    const numeric = Number.parseFloat(trimmed);
+    return Number.isFinite(numeric) ? clamp(numeric, 0, 255) : null;
+  }
+
+  function parseCssAlpha(value) {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (trimmed.endsWith('%')) {
+      const numeric = Number.parseFloat(trimmed.slice(0, -1));
+      return Number.isFinite(numeric) ? clamp(numeric / 100, 0, 1) : null;
+    }
+
+    const numeric = Number.parseFloat(trimmed);
+    return Number.isFinite(numeric) ? clamp(numeric, 0, 1) : null;
+  }
+
+  function parseHexCssColor(value) {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const match = value
+      .trim()
+      .match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+    if (!match) {
+      return null;
+    }
+
+    const shorthand = match[1].length === 3 || match[1].length === 4;
+    const normalized = shorthand
+      ? [...match[1]].map(channel => channel + channel).join('')
+      : match[1];
+
+    return {
+      r: Number.parseInt(normalized.slice(0, 2), 16),
+      g: Number.parseInt(normalized.slice(2, 4), 16),
+      b: Number.parseInt(normalized.slice(4, 6), 16),
+      a:
+        normalized.length === 8
+          ? Number.parseInt(normalized.slice(6, 8), 16) / 255
+          : 1,
+    };
+  }
+
+  function parseRgbCssColor(value) {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const rgbMatch = value.trim().match(/^rgba?\((.+)\)$/i);
     if (!rgbMatch) {
       return null;
     }
 
-    const parts = rgbMatch[1].split(',').map(part => part.trim());
-    if (parts.length < 3 || parts.length > 4) {
-      return null;
+    const body = rgbMatch[1].trim();
+    let channels = [];
+    let alphaToken = null;
+
+    if (body.includes(',')) {
+      const parts = body.split(',').map(part => part.trim());
+      if (parts.length < 3 || parts.length > 4) {
+        return null;
+      }
+
+      channels = parts.slice(0, 3);
+      alphaToken = parts[3] ?? null;
+    } else {
+      const slashParts = body.split('/').map(part => part.trim());
+      if (slashParts.length > 2) {
+        return null;
+      }
+
+      channels = slashParts[0].split(/\s+/).filter(Boolean);
+      if (channels.length !== 3) {
+        return null;
+      }
+
+      alphaToken = slashParts[1] ?? null;
     }
 
-    const r = Number(parts[0]);
-    const g = Number(parts[1]);
-    const b = Number(parts[2]);
-    const a = parts.length === 4 ? Number(parts[3]) : 1;
+    const [rToken, gToken, bToken] = channels;
+    const r = parseCssChannel(rToken);
+    const g = parseCssChannel(gToken);
+    const b = parseCssChannel(bToken);
+    const a = alphaToken === null ? 1 : parseCssAlpha(alphaToken);
     if (![r, g, b, a].every(Number.isFinite)) {
       return null;
     }
 
-    return {
-      r: clamp(r, 0, 255),
-      g: clamp(g, 0, 255),
-      b: clamp(b, 0, 255),
-      a: clamp(a, 0, 1),
-    };
+    return { r, g, b, a };
+  }
+
+  function parseCssColor(value) {
+    if (typeof value !== 'string' || !isValidCssColor(value)) {
+      return null;
+    }
+
+    return parseHexCssColor(value) || parseRgbCssColor(value);
   }
 
   function formatRgba(r, g, b, a) {
