@@ -348,7 +348,49 @@
     return src.length > 0 ? src : null;
   }
 
-  function extractImageFromTarget(target) {
+  function rectContainsPoint(rect, x, y) {
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+  }
+
+  function findImageInSubtree(root, x, y) {
+    if (!(root instanceof Element)) {
+      return null;
+    }
+
+    const hasPoint = Number.isFinite(x) && Number.isFinite(y);
+    let firstVisibleImage = null;
+    let bestPointMatch = null;
+    let bestPointMatchArea = Infinity;
+
+    for (const img of root.querySelectorAll('img')) {
+      if (!(img instanceof HTMLImageElement) || !isVisibleImage(img)) {
+        continue;
+      }
+
+      if (!firstVisibleImage) {
+        firstVisibleImage = img;
+      }
+
+      if (!hasPoint) {
+        continue;
+      }
+
+      const rect = img.getBoundingClientRect();
+      if (!rectContainsPoint(rect, x, y)) {
+        continue;
+      }
+
+      const area = rect.width * rect.height;
+      if (area < bestPointMatchArea) {
+        bestPointMatch = img;
+        bestPointMatchArea = area;
+      }
+    }
+
+    return bestPointMatch || firstVisibleImage;
+  }
+
+  function extractImageFromTarget(target, x, y) {
     if (!(target instanceof Element)) {
       return null;
     }
@@ -358,12 +400,37 @@
     }
 
     const closestImg = target.closest('img');
-    return closestImg instanceof HTMLImageElement ? closestImg : null;
+    if (closestImg instanceof HTMLImageElement) {
+      return closestImg;
+    }
+
+    let current = target;
+    while (current instanceof Element) {
+      const descendantImg = findImageInSubtree(current, x, y);
+      if (descendantImg) {
+        return descendantImg;
+      }
+
+      current = current.parentElement;
+    }
+
+    return null;
   }
 
   function resolveImageFromPoint(x, y) {
-    const el = document.elementFromPoint(x, y);
-    return extractImageFromTarget(el);
+    const elements =
+      typeof document.elementsFromPoint === 'function'
+        ? document.elementsFromPoint(x, y)
+        : [document.elementFromPoint(x, y)];
+
+    for (const el of elements) {
+      const img = extractImageFromTarget(el, x, y);
+      if (img) {
+        return img;
+      }
+    }
+
+    return null;
   }
 
   function computeFitScale() {
@@ -809,7 +876,11 @@
       return;
     }
 
-    let candidate = extractImageFromTarget(event.target);
+    let candidate = extractImageFromTarget(
+      event.target,
+      event.clientX,
+      event.clientY,
+    );
     if (!candidate) {
       candidate = resolveImageFromPoint(event.clientX, event.clientY);
     }
