@@ -15,9 +15,9 @@ Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 - Toggle toolbar/close controls with `h` while lightbox is open
 - Mouse wheel zoom around cursor
 - Drag-to-pan when zoomed in
-- Color customization for toolbar and close button styles (via Options)
-- Option to hide overlay controls by default (via Options)
-- Customizable controls-toggle shortcut (via Options, resettable to default)
+- Color customization for toolbar and close button styles (via Settings)
+- Option to hide overlay controls by default (via Settings)
+- Customizable controls-toggle shortcut (via Settings, resettable to default)
 - Close with `Esc` or click outside
 - Runs on most `http://` and `https://` pages
 
