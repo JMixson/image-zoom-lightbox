@@ -333,6 +333,28 @@
           </h2>
           <div class="field-grid">
             <div class="field">
+              <label for="hideControlsByDefault">
+                Hide overlay controls by default
+              </label>
+              <div class="field-control field-control-toggle">
+                <input
+                  id="hideControlsByDefault"
+                  class="toggle-input"
+                  type="checkbox"
+                  name="hideControlsByDefault"
+                  aria-label="Hide overlay controls by default"
+                />
+                <label class="toggle-switch" for="hideControlsByDefault">
+                  <span class="toggle-track" aria-hidden="true"></span>
+                  <span class="toggle-label">Enable</span>
+                </label>
+              </div>
+              <p class="field-help">
+                When enabled, the toolbar and close button stay hidden until you
+                press the toggle shortcut.
+              </p>
+            </div>
+            <div class="field">
               <label for="toggleControlsKey">Toggle controls shortcut</label>
               <div class="field-control">
                 <input

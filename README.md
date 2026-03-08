@@ -16,6 +16,7 @@ Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 - Mouse wheel zoom around cursor
 - Drag-to-pan when zoomed in
 - Color customization for toolbar and close button styles (via Options)
+- Option to hide overlay controls by default (via Options)
 - Customizable controls-toggle shortcut (via Options, resettable to default)
 - Close with `Esc` or click outside
 - Runs on most `http://` and `https://` pages
@@ -48,6 +49,9 @@ Created using GPT-5.3-Codex for functionality, and Sonnet 4.6 for styling.
 4. Drag to pan when zoomed.
 5. Press `h` to hide/show the toolbar and close button.
 6. Press `Esc` (or click outside) to close.
+
+If you enable "Hide overlay controls by default" in Options, step 5 is also how
+you reveal the controls after opening the lightbox.
 
 ## Project Structure
 

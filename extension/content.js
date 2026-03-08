@@ -24,6 +24,7 @@
     closeButtonHoverText: '#fff',
   });
   const DEFAULT_SHORTCUT_SETTINGS = Object.freeze({
+    hideControlsByDefault: false,
     toggleControlsKey: 'h',
   });
   const DEFAULT_RESET_THEME = Object.freeze({
@@ -72,6 +73,8 @@
   let overlayAbortController = null;
   let controlsHidden = false;
   let currentThemeSettings = { ...DEFAULT_THEME_SETTINGS };
+  let currentHideControlsByDefault =
+    DEFAULT_SHORTCUT_SETTINGS.hideControlsByDefault;
   let currentToggleControlsKey = DEFAULT_SHORTCUT_SETTINGS.toggleControlsKey;
   let themeSettingsLoadPromise = null;
 
@@ -150,6 +153,7 @@
       : '';
 
     return {
+      hideControlsByDefault: Boolean(raw.hideControlsByDefault),
       toggleControlsKey:
         normalized || DEFAULT_SHORTCUT_SETTINGS.toggleControlsKey,
     };
@@ -236,6 +240,7 @@
       .then(stored => {
         currentThemeSettings = sanitizeThemeSettings(stored);
         const shortcutSettings = sanitizeShortcutSettings(stored);
+        currentHideControlsByDefault = shortcutSettings.hideControlsByDefault;
         currentToggleControlsKey = shortcutSettings.toggleControlsKey;
         if (overlayEl) {
           applyThemeSettings(overlayEl, currentThemeSettings);
@@ -255,7 +260,7 @@
     const patch = {};
     let hasThemeChange = false;
     let hasShortcutChange = false;
-    let updatedShortcutKey = null;
+    const shortcutPatch = {};
 
     for (const key of THEME_SETTING_KEYS) {
       if (!hasOwn(changes, key)) {
@@ -272,7 +277,7 @@
       }
 
       hasShortcutChange = true;
-      updatedShortcutKey = changes[key]?.newValue;
+      shortcutPatch[key] = changes[key]?.newValue;
     }
 
     if (hasThemeChange) {
@@ -287,9 +292,13 @@
     }
 
     if (hasShortcutChange) {
-      currentToggleControlsKey = sanitizeShortcutSettings({
-        toggleControlsKey: updatedShortcutKey,
-      }).toggleControlsKey;
+      const shortcutSettings = sanitizeShortcutSettings({
+        hideControlsByDefault: currentHideControlsByDefault,
+        toggleControlsKey: currentToggleControlsKey,
+        ...shortcutPatch,
+      });
+      currentHideControlsByDefault = shortcutSettings.hideControlsByDefault;
+      currentToggleControlsKey = shortcutSettings.toggleControlsKey;
     }
   }
 
@@ -863,7 +872,7 @@
 
     activeImageSrc = src;
     overlayOpen = true;
-    controlsHidden = false;
+    controlsHidden = currentHideControlsByDefault;
 
     buildOverlay(img.alt || '');
   }

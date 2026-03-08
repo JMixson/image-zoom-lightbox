@@ -14,6 +14,7 @@
     closeButtonHoverText: '#fff',
   });
   const DEFAULT_SHORTCUT_SETTINGS = Object.freeze({
+    hideControlsByDefault: false,
     toggleControlsKey: 'h',
   });
   const DEFAULT_SETTINGS = Object.freeze({
@@ -39,6 +40,7 @@
     closeButtonText: 'Close button text',
     closeButtonHoverBg: 'Close hover background',
     closeButtonHoverText: 'Close hover text',
+    hideControlsByDefault: 'Hide controls by default',
     toggleControlsKey: 'Toggle controls shortcut',
   });
   const COLOR_KEYS = [
@@ -258,6 +260,7 @@
     const raw =
       rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
     return {
+      hideControlsByDefault: Boolean(raw.hideControlsByDefault),
       toggleControlsKey: sanitizeShortcutKey(raw.toggleControlsKey),
     };
   }
@@ -329,6 +332,11 @@
         continue;
       }
 
+      if (key === 'hideControlsByDefault') {
+        raw[key] = Boolean(field.checked);
+        continue;
+      }
+
       if (key === 'toggleControlsKey') {
         raw[key] = String(field.value || '');
         continue;
@@ -357,6 +365,11 @@
         continue;
       }
 
+      if (key === 'hideControlsByDefault') {
+        field.checked = Boolean(settings[key]);
+        continue;
+      }
+
       if (key === 'toggleControlsKey') {
         field.value = sanitizeShortcutKey(String(settings[key] ?? ''));
         continue;
@@ -374,6 +387,11 @@
 
     const field = formEl?.elements?.namedItem(key);
     if (field) {
+      if (key === 'hideControlsByDefault') {
+        field.checked = Boolean(value);
+        return;
+      }
+
       field.value =
         key === 'toggleControlsKey'
           ? sanitizeShortcutKey(String(value))
