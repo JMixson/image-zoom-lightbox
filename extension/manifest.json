@@ -1,9 +1,12 @@
 ﻿{
   "manifest_version": 3,
   "name": "Image Zoom Lightbox",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Open an Edge-like image zoom lightbox by double-pressing Ctrl while hovering an image.",
   "permissions": ["storage"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none';"
+  },
   "options_page": "options.html",
   "action": {
     "default_title": "Image Zoom Lightbox",
