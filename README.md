@@ -1,6 +1,6 @@
 ﻿# Image Zoom Lightbox (Chrome Extension)
 
-A Chrome extension that opens an Edge-style image lightbox when you press `Ctrl` twice while hovering an image.
+A Chrome extension that opens an Edge-style image lightbox when you use a configurable double-press activation shortcut while hovering an image.
 
 ## Preview
 
@@ -8,14 +8,16 @@ A Chrome extension that opens an Edge-style image lightbox when you press `Ctrl`
 
 ## Features
 
-- Double-click `Ctrl` activation on hovered images
+- Configurable double-press activation shortcut on hovered images (`Ctrl + Ctrl` by default)
 - Zoom controls (`-`, `+`, `Fit`)
-- Toggle toolbar/close controls with `h` while lightbox is open
+- Toggle toolbar/close controls with `h` by default while the lightbox is open
 - Mouse wheel zoom around cursor
 - Drag-to-pan when zoomed in
 - Color customization for toolbar and close button styles (via Settings)
+- Customizable activation shortcut (supported modifier double-presses via Settings)
 - Option to hide overlay controls by default (via Settings)
 - Customizable controls-toggle shortcut (via Settings, resettable to default)
+- Activation shortcut is ignored while typing in editable fields
 - Close with `Esc` or click outside
 - Runs on most `http://` and `https://` pages
 
@@ -42,14 +44,18 @@ A Chrome extension that opens an Edge-style image lightbox when you press `Ctrl`
 ## Usage
 
 1. Hover any image on a webpage.
-2. Press `Ctrl` twice quickly.
+2. Press the configured activation shortcut twice quickly. The default is `Ctrl + Ctrl`.
 3. Zoom with the mouse wheel or toolbar buttons.
 4. Drag to pan when zoomed.
-5. Press `h` to hide/show the toolbar and close button.
+5. Press the controls-toggle shortcut to hide/show the toolbar and close button. The default is `h`.
 6. Press `Esc` (or click outside) to close.
 
 If you enable "Hide overlay controls by default" in Options, step 5 is also how
 you reveal the controls after opening the lightbox.
+
+You can change the activation shortcut in Options. Supported choices are
+modifier double-press shortcuts such as `Ctrl + Ctrl`, `Shift + Shift`, and
+`Cmd/Meta + Cmd/Meta`.
 
 ## Project Structure
 
