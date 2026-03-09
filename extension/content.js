@@ -5,7 +5,7 @@
     return;
   }
 
-  const DOUBLE_CTRL_MS = 350;
+  const DOUBLE_ACTIVATION_MS = 350;
   const ZOOM_STEP = 1.1;
   const MAX_ZOOM_MULTIPLIER = 8;
   const MAX_IMAGE_ALT_LENGTH = 300;
@@ -13,6 +13,14 @@
   const VIEWPORT_PADDING_X = 96;
   const VIEWPORT_PADDING_Y = 96;
   const SAFE_IMAGE_PROTOCOLS = new Set(['http:', 'https:', 'data:']);
+  const ACTIVATION_SHORTCUTS = Object.freeze({
+    double_ctrl: 'Control',
+    double_shift: 'Shift',
+    double_meta: 'Meta',
+  });
+  const ACTIVATION_SHORTCUT_KEYS = new Set(
+    Object.keys(ACTIVATION_SHORTCUTS),
+  );
   const DEFAULT_THEME_SETTINGS = Object.freeze({
     buttonBg: 'rgba(255, 255, 255, 0.13)',
     buttonText: 'rgba(255, 255, 255, 0.92)',
@@ -26,6 +34,7 @@
     closeButtonHoverText: '#fff',
   });
   const DEFAULT_SHORTCUT_SETTINGS = Object.freeze({
+    activationShortcut: 'double_ctrl',
     hideControlsByDefault: false,
     toggleControlsKey: 'h',
   });
@@ -38,7 +47,7 @@
   const SHORTCUT_SETTING_KEYS = Object.keys(DEFAULT_SHORTCUT_SETTINGS);
   const STORED_SETTING_KEYS = [...THEME_SETTING_KEYS, ...SHORTCUT_SETTING_KEYS];
 
-  let lastCtrlTs = 0;
+  let lastActivationTs = 0;
   let lastPointerClientX = 0;
   let lastPointerClientY = 0;
   let hoveredImage = null;
@@ -75,10 +84,11 @@
   let overlayAbortController = null;
   let controlsHidden = false;
   let currentThemeSettings = { ...DEFAULT_THEME_SETTINGS };
+  let currentActivationShortcut = DEFAULT_SHORTCUT_SETTINGS.activationShortcut;
   let currentHideControlsByDefault =
     DEFAULT_SHORTCUT_SETTINGS.hideControlsByDefault;
   let currentToggleControlsKey = DEFAULT_SHORTCUT_SETTINGS.toggleControlsKey;
-  let themeSettingsLoadPromise = null;
+  let storedSettingsLoadPromise = null;
 
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
   const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
@@ -147,6 +157,12 @@
     return trimmed.slice(0, 1).toLowerCase();
   }
 
+  function sanitizeActivationShortcut(value) {
+    return typeof value === 'string' && ACTIVATION_SHORTCUT_KEYS.has(value)
+      ? value
+      : DEFAULT_SHORTCUT_SETTINGS.activationShortcut;
+  }
+
   function sanitizeShortcutSettings(rawSettings) {
     const raw =
       rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
@@ -155,6 +171,7 @@
       : '';
 
     return {
+      activationShortcut: sanitizeActivationShortcut(raw.activationShortcut),
       hideControlsByDefault: Boolean(raw.hideControlsByDefault),
       toggleControlsKey:
         normalized || DEFAULT_SHORTCUT_SETTINGS.toggleControlsKey,
@@ -233,15 +250,16 @@
     });
   }
 
-  function loadThemeSettings() {
-    if (themeSettingsLoadPromise) {
-      return themeSettingsLoadPromise;
+  function loadStoredSettings() {
+    if (storedSettingsLoadPromise) {
+      return storedSettingsLoadPromise;
     }
 
-    themeSettingsLoadPromise = getStoredSettingsValues()
+    storedSettingsLoadPromise = getStoredSettingsValues()
       .then(stored => {
         currentThemeSettings = sanitizeThemeSettings(stored);
         const shortcutSettings = sanitizeShortcutSettings(stored);
+        currentActivationShortcut = shortcutSettings.activationShortcut;
         currentHideControlsByDefault = shortcutSettings.hideControlsByDefault;
         currentToggleControlsKey = shortcutSettings.toggleControlsKey;
         if (overlayEl) {
@@ -250,14 +268,14 @@
         return currentThemeSettings;
       })
       .catch(() => {
-        themeSettingsLoadPromise = null;
+        storedSettingsLoadPromise = null;
         return currentThemeSettings;
       });
 
-    return themeSettingsLoadPromise;
+    return storedSettingsLoadPromise;
   }
 
-  function handleStorageThemeUpdates(changes, areaName) {
+  function handleStorageSettingsUpdates(changes, areaName) {
     if (areaName !== 'sync' || !changes || typeof changes !== 'object') {
       return;
     }
@@ -298,10 +316,15 @@
 
     if (hasShortcutChange) {
       const shortcutSettings = sanitizeShortcutSettings({
+        activationShortcut: currentActivationShortcut,
         hideControlsByDefault: currentHideControlsByDefault,
         toggleControlsKey: currentToggleControlsKey,
         ...shortcutPatch,
       });
+      if (currentActivationShortcut !== shortcutSettings.activationShortcut) {
+        lastActivationTs = 0;
+      }
+      currentActivationShortcut = shortcutSettings.activationShortcut;
       currentHideControlsByDefault = shortcutSettings.hideControlsByDefault;
       currentToggleControlsKey = shortcutSettings.toggleControlsKey;
     }
@@ -934,7 +957,8 @@
 
     if (
       target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement
     ) {
       return true;
     }
@@ -951,6 +975,37 @@
     return !!key && key === currentToggleControlsKey;
   }
 
+  function isActivationShortcutEvent(event) {
+    if (event.repeat) {
+      return false;
+    }
+
+    switch (currentActivationShortcut) {
+      case 'double_shift':
+        return (
+          event.key === ACTIVATION_SHORTCUTS.double_shift &&
+          !event.ctrlKey &&
+          !event.altKey &&
+          !event.metaKey
+        );
+      case 'double_meta':
+        return (
+          event.key === ACTIVATION_SHORTCUTS.double_meta &&
+          !event.ctrlKey &&
+          !event.shiftKey &&
+          !event.altKey
+        );
+      case 'double_ctrl':
+      default:
+        return (
+          event.key === ACTIVATION_SHORTCUTS.double_ctrl &&
+          !event.shiftKey &&
+          !event.altKey &&
+          !event.metaKey
+        );
+    }
+  }
+
   function onGlobalKeyDown(event) {
     if (overlayOpen && isToggleControlsKeyEvent(event) && !isEditableTarget(event.target)) {
       event.preventDefault();
@@ -964,15 +1019,19 @@
       return;
     }
 
-    if (event.key !== 'Control' || event.repeat) {
+    if (overlayOpen || isEditableTarget(event.target)) {
+      return;
+    }
+
+    if (!isActivationShortcutEvent(event)) {
       return;
     }
 
     const now = performance.now();
-    const delta = now - lastCtrlTs;
-    lastCtrlTs = now;
+    const delta = now - lastActivationTs;
+    lastActivationTs = now;
 
-    if (delta > DOUBLE_CTRL_MS || overlayOpen) {
+    if (delta > DOUBLE_ACTIVATION_MS) {
       return;
     }
 
@@ -990,8 +1049,8 @@
   document.addEventListener('keydown', onGlobalKeyDown, true);
 
   if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
-    chrome.storage.onChanged.addListener(handleStorageThemeUpdates);
+    chrome.storage.onChanged.addListener(handleStorageSettingsUpdates);
   }
 
-  void loadThemeSettings();
+  void loadStoredSettings();
 })();
