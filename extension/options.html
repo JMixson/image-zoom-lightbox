@@ -18,6 +18,87 @@
       </header>
 
       <form id="theme-form" class="panel" novalidate>
+        <section class="settings-group" aria-labelledby="keyboard-heading">
+          <h2 id="keyboard-heading" class="settings-group-title">Keyboard</h2>
+          <div class="field-grid">
+            <div class="field">
+              <label for="activationShortcut">Activation shortcut</label>
+              <div class="field-control">
+                <select
+                  id="activationShortcut"
+                  class="select-input"
+                  name="activationShortcut"
+                  aria-label="Activation shortcut"
+                >
+                  <option value="double_ctrl">Ctrl + Ctrl</option>
+                  <option value="double_shift">Shift + Shift</option>
+                  <option value="double_meta">Cmd/Meta + Cmd/Meta</option>
+                </select>
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="activationShortcut"
+                >
+                  Reset
+                </button>
+              </div>
+              <p class="field-help">
+                Choose which supported double-press shortcut opens the lightbox
+                while hovering an image.
+              </p>
+            </div>
+            <div class="field">
+              <label for="hideControlsByDefault">
+                Hide overlay controls by default
+              </label>
+              <div class="field-control field-control-toggle">
+                <input
+                  id="hideControlsByDefault"
+                  class="toggle-input"
+                  type="checkbox"
+                  name="hideControlsByDefault"
+                  aria-label="Hide overlay controls by default"
+                />
+                <label class="toggle-switch" for="hideControlsByDefault">
+                  <span class="toggle-track" aria-hidden="true"></span>
+                  <span class="toggle-label">Enable</span>
+                </label>
+              </div>
+              <p class="field-help">
+                When enabled, the toolbar and close button stay hidden until you
+                press the toggle shortcut.
+              </p>
+            </div>
+            <div class="field">
+              <label for="toggleControlsKey">Toggle controls shortcut</label>
+              <div class="field-control">
+                <input
+                  id="toggleControlsKey"
+                  class="shortcut-input"
+                  type="text"
+                  name="toggleControlsKey"
+                  maxlength="1"
+                  autocomplete="off"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  aria-label="Toggle controls shortcut key"
+                />
+                <button
+                  type="button"
+                  class="field-reset"
+                  data-reset-key="toggleControlsKey"
+                >
+                  Reset
+                </button>
+              </div>
+              <p class="field-help">
+                Press this key while the zoom overlay is open to hide or show
+                the toolbar and close button.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section
           class="settings-group"
           aria-labelledby="toolbar-controls-heading"
@@ -323,63 +404,6 @@
                   Reset
                 </button>
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="settings-group" aria-labelledby="keyboard-heading">
-          <h2 id="keyboard-heading" class="settings-group-title">
-            Keyboard
-          </h2>
-          <div class="field-grid">
-            <div class="field">
-              <label for="hideControlsByDefault">
-                Hide overlay controls by default
-              </label>
-              <div class="field-control field-control-toggle">
-                <input
-                  id="hideControlsByDefault"
-                  class="toggle-input"
-                  type="checkbox"
-                  name="hideControlsByDefault"
-                  aria-label="Hide overlay controls by default"
-                />
-                <label class="toggle-switch" for="hideControlsByDefault">
-                  <span class="toggle-track" aria-hidden="true"></span>
-                  <span class="toggle-label">Enable</span>
-                </label>
-              </div>
-              <p class="field-help">
-                When enabled, the toolbar and close button stay hidden until you
-                press the toggle shortcut.
-              </p>
-            </div>
-            <div class="field">
-              <label for="toggleControlsKey">Toggle controls shortcut</label>
-              <div class="field-control">
-                <input
-                  id="toggleControlsKey"
-                  class="shortcut-input"
-                  type="text"
-                  name="toggleControlsKey"
-                  maxlength="1"
-                  autocomplete="off"
-                  autocapitalize="none"
-                  spellcheck="false"
-                  aria-label="Toggle controls shortcut key"
-                />
-                <button
-                  type="button"
-                  class="field-reset"
-                  data-reset-key="toggleControlsKey"
-                >
-                  Reset
-                </button>
-              </div>
-              <p class="field-help">
-                Press this key while the zoom overlay is open to hide or show
-                the toolbar and close button.
-              </p>
             </div>
           </div>
         </section>
