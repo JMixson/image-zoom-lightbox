@@ -54,11 +54,11 @@ If you enable "Hide overlay controls by default" in Settings, step 5 is also how
 
 You can change the activation shortcut in Settings. Supported choices are modifier double-press shortcuts such as `Ctrl + Ctrl`, `Shift + Shift`, and `Cmd/Meta + Cmd/Meta`.
 
-## macOS Users
+### macOS Users
 
 On macOS, if the default activation shortcut is not working in your browser or system setup, change it in Settings to a different supported shortcut such as `Shift + Shift` or `Cmd/Meta + Cmd/Meta`.
 
-## Edge Browser Users
+### Edge Browser Users
 
 The Microsoft Edge browser includes a built-in **Magnify image** feature that also uses `Ctrl + Ctrl` by default. If you use this extension in Edge, the default activation shortcut may conflict with the browser's built-in behavior.
 
