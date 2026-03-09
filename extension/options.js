@@ -1,6 +1,11 @@
 (() => {
   'use strict';
 
+  const ACTIVATION_SHORTCUT_VALUES = new Set([
+    'double_ctrl',
+    'double_shift',
+    'double_meta',
+  ]);
   const DEFAULT_THEME_SETTINGS = Object.freeze({
     buttonBg: 'rgba(255, 255, 255, 0.13)',
     buttonText: 'rgba(255, 255, 255, 0.92)',
@@ -14,6 +19,7 @@
     closeButtonHoverText: '#fff',
   });
   const DEFAULT_SHORTCUT_SETTINGS = Object.freeze({
+    activationShortcut: 'double_ctrl',
     hideControlsByDefault: false,
     toggleControlsKey: 'h',
   });
@@ -40,6 +46,7 @@
     closeButtonText: 'Close button text',
     closeButtonHoverBg: 'Close hover background',
     closeButtonHoverText: 'Close hover text',
+    activationShortcut: 'Activation shortcut',
     hideControlsByDefault: 'Hide controls by default',
     toggleControlsKey: 'Toggle controls shortcut',
   });
@@ -331,10 +338,17 @@
     );
   }
 
+  function sanitizeActivationShortcut(value) {
+    return typeof value === 'string' && ACTIVATION_SHORTCUT_VALUES.has(value)
+      ? value
+      : DEFAULT_SHORTCUT_SETTINGS.activationShortcut;
+  }
+
   function sanitizeShortcutSettings(rawSettings) {
     const raw =
       rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
     return {
+      activationShortcut: sanitizeActivationShortcut(raw.activationShortcut),
       hideControlsByDefault: Boolean(raw.hideControlsByDefault),
       toggleControlsKey: sanitizeShortcutKey(raw.toggleControlsKey),
     };
@@ -450,7 +464,10 @@
         continue;
       }
 
-      field.value = settings[key];
+      field.value =
+        key === 'activationShortcut'
+          ? sanitizeActivationShortcut(String(settings[key] ?? ''))
+          : settings[key];
     }
   }
 
@@ -468,9 +485,11 @@
       }
 
       field.value =
-        key === 'toggleControlsKey'
-          ? sanitizeShortcutKey(String(value))
-          : String(value);
+        key === 'activationShortcut'
+          ? sanitizeActivationShortcut(String(value))
+          : key === 'toggleControlsKey'
+            ? sanitizeShortcutKey(String(value))
+            : String(value);
     }
   }
 
