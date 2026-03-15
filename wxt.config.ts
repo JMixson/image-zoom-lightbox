@@ -26,7 +26,7 @@ export default defineConfig({
     browser_specific_settings: {
       gecko: {
         id: 'image-zoom-lightbox@jasminemixson.com',
-        strict_min_version: '109.0',
+        strict_min_version: '142.0',
         // @ts-ignore - WXT doesn't support this field yet
         data_collection_permissions: {
           required: ['none'],
