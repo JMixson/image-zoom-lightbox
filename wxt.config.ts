@@ -7,7 +7,7 @@ export default defineConfig({
   manifestVersion: 3,
   manifest: {
     name: 'Image Zoom Lightbox',
-    version: '2.0.0',
+    version: '2.0.1',
     description:
       'Open an Edge-like image zoom lightbox with a configurable double-press shortcut while hovering an image.',
     permissions: ['storage'],
