@@ -36,7 +36,7 @@ export default defineContentScript({
     const OVERLAY_Z_INDEX = 2147483000;
     const VIEWPORT_PADDING_X = 96;
     const VIEWPORT_PADDING_Y = 96;
-    const SAFE_IMAGE_PROTOCOLS = new Set(['http:', 'https:', 'data:']);
+    const SAFE_IMAGE_PROTOCOLS = new Set(['http:', 'https:', 'blob:']);
 
     let lastActivationTs = 0;
     let lastPointerClientX = 0;
@@ -222,12 +222,6 @@ export default defineContentScript({
           return null;
         }
 
-        if (
-          url.protocol === 'data:' &&
-          !src.toLowerCase().startsWith('data:image/')
-        ) {
-          return null;
-        }
       } catch {
         return null;
       }
