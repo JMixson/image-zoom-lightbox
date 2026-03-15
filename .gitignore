@@ -10,6 +10,13 @@
 !.yarn/releases
 !.yarn/versions
 
+# wxt files
+.output
+stats.html
+stats-*.json
+.wxt
+web-ext.config.ts
+
 # testing
 /coverage
 
@@ -17,23 +24,32 @@
 /build
 
 # misc
-.DS_Store
 *.pem
 /references
-
+/ignore
 
 # debug
+logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*
 
-# vercel
-.vercel
-
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
