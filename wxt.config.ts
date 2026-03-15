@@ -4,6 +4,7 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   srcDir: 'src',
   modules: ['@wxt-dev/module-react'],
+  manifestVersion: 3,
   manifest: {
     name: 'Image Zoom Lightbox',
     version: '2.0.0',
@@ -21,6 +22,12 @@ export default defineConfig({
     },
     content_security_policy: {
       extension_pages: "script-src 'self'; object-src 'none';",
+    },
+    browser_specific_settings: {
+      gecko: {
+        id: 'contact@jasminemixson.com',
+        strict_min_version: '109.0',
+      },
     },
   },
 });
