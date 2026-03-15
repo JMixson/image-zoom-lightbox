@@ -1,21 +1,25 @@
-import { z } from 'zod';
-
 export const ACTIVATION_SHORTCUTS = Object.freeze({
   double_ctrl: 'Control',
   double_shift: 'Shift',
   double_meta: 'Meta',
 });
 
-export const activationShortcutSchema = z.enum([
+export const ACTIVATION_SHORTCUT_KEYS = [
   'double_ctrl',
   'double_shift',
   'double_meta',
-]);
+] as const;
 
-export type ActivationShortcut = z.infer<typeof activationShortcutSchema>;
+export type ActivationShortcut = (typeof ACTIVATION_SHORTCUT_KEYS)[number];
 
-export const ACTIVATION_SHORTCUT_KEYS =
-  activationShortcutSchema.options satisfies readonly ActivationShortcut[];
+const ACTIVATION_SHORTCUT_KEY_SET = new Set<string>(ACTIVATION_SHORTCUT_KEYS);
+
+export function isActivationShortcut(value: unknown): value is ActivationShortcut {
+  return (
+    typeof value === 'string' &&
+    ACTIVATION_SHORTCUT_KEY_SET.has(value)
+  );
+}
 
 export function normalizeShortcutKey(value: unknown): string {
   if (typeof value !== 'string') {

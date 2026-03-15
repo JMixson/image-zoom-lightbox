@@ -1,8 +1,6 @@
-import { z } from 'zod';
-
 import { clamp, isValidCssColor } from './colors';
 import {
-  activationShortcutSchema,
+  isActivationShortcut,
   normalizeShortcutKey,
   type ActivationShortcut,
 } from './shortcuts';
@@ -108,56 +106,120 @@ export type ThemeSettingKey = (typeof THEME_SETTING_KEYS)[number];
 export type ShortcutSettingKey = (typeof SHORTCUT_SETTING_KEYS)[number];
 export type StoredSettingKey = (typeof STORED_SETTING_KEYS)[number];
 
-function createColorSchema<TFallback extends string>(fallback: TFallback) {
-  return z
-    .string()
-    .trim()
-    .refine(isValidCssColor)
-    .catch(fallback);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
-const themeSettingsSchema = z.object({
-  buttonBg: createColorSchema(DEFAULT_THEME_SETTINGS.buttonBg),
-  buttonText: createColorSchema(DEFAULT_THEME_SETTINGS.buttonText),
-  buttonHoverBg: createColorSchema(DEFAULT_THEME_SETTINGS.buttonHoverBg),
-  buttonHoverText: createColorSchema(DEFAULT_THEME_SETTINGS.buttonHoverText),
-  buttonActiveBg: createColorSchema(DEFAULT_THEME_SETTINGS.buttonActiveBg),
-  buttonDisabledOpacity: z.coerce
-    .number()
-    .transform(value => clamp(value, 0, 1))
-    .catch(DEFAULT_THEME_SETTINGS.buttonDisabledOpacity),
-  closeButtonBg: createColorSchema(DEFAULT_THEME_SETTINGS.closeButtonBg),
-  closeButtonText: createColorSchema(DEFAULT_THEME_SETTINGS.closeButtonText),
-  closeButtonHoverBg: createColorSchema(DEFAULT_THEME_SETTINGS.closeButtonHoverBg),
-  closeButtonHoverText: createColorSchema(
-    DEFAULT_THEME_SETTINGS.closeButtonHoverText,
-  ),
-});
+function readRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
 
-const shortcutSettingsSchema = z.object({
-  activationShortcut: activationShortcutSchema.catch(
-    DEFAULT_SHORTCUT_SETTINGS.activationShortcut,
-  ),
-  hideControlsByDefault: z.coerce
-    .boolean()
-    .catch(DEFAULT_SHORTCUT_SETTINGS.hideControlsByDefault),
-  toggleControlsKey: z
-    .unknown()
-    .transform(value => normalizeShortcutKey(value))
-    .transform(
-      value => value || DEFAULT_SHORTCUT_SETTINGS.toggleControlsKey,
-    ),
-});
+function parseColorSetting(value: unknown, fallback: string): string {
+  return typeof value === 'string' && isValidCssColor(value.trim())
+    ? value.trim()
+    : fallback;
+}
 
-const partialThemeSettingsSchema = themeSettingsSchema.partial();
-const partialShortcutSettingsSchema = shortcutSettingsSchema.partial();
+function parseDisabledOpacity(value: unknown): number {
+  const numeric =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? Number(value)
+        : Number.NaN;
+
+  return Number.isFinite(numeric)
+    ? clamp(numeric, 0, 1)
+    : DEFAULT_THEME_SETTINGS.buttonDisabledOpacity;
+}
+
+function parseBooleanSetting(value: unknown, fallback: boolean): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    if (value === 'true') {
+      return true;
+    }
+
+    if (value === 'false') {
+      return false;
+    }
+  }
+
+  if (typeof value === 'number') {
+    if (value === 1) {
+      return true;
+    }
+
+    if (value === 0) {
+      return false;
+    }
+  }
+
+  return fallback;
+}
 
 export function parseThemeSettings(rawSettings: unknown): ThemeSettings {
-  return themeSettingsSchema.parse(rawSettings ?? {});
+  const settings = readRecord(rawSettings);
+
+  return {
+    buttonBg: parseColorSetting(
+      settings.buttonBg,
+      DEFAULT_THEME_SETTINGS.buttonBg,
+    ),
+    buttonText: parseColorSetting(
+      settings.buttonText,
+      DEFAULT_THEME_SETTINGS.buttonText,
+    ),
+    buttonHoverBg: parseColorSetting(
+      settings.buttonHoverBg,
+      DEFAULT_THEME_SETTINGS.buttonHoverBg,
+    ),
+    buttonHoverText: parseColorSetting(
+      settings.buttonHoverText,
+      DEFAULT_THEME_SETTINGS.buttonHoverText,
+    ),
+    buttonActiveBg: parseColorSetting(
+      settings.buttonActiveBg,
+      DEFAULT_THEME_SETTINGS.buttonActiveBg,
+    ),
+    buttonDisabledOpacity: parseDisabledOpacity(settings.buttonDisabledOpacity),
+    closeButtonBg: parseColorSetting(
+      settings.closeButtonBg,
+      DEFAULT_THEME_SETTINGS.closeButtonBg,
+    ),
+    closeButtonText: parseColorSetting(
+      settings.closeButtonText,
+      DEFAULT_THEME_SETTINGS.closeButtonText,
+    ),
+    closeButtonHoverBg: parseColorSetting(
+      settings.closeButtonHoverBg,
+      DEFAULT_THEME_SETTINGS.closeButtonHoverBg,
+    ),
+    closeButtonHoverText: parseColorSetting(
+      settings.closeButtonHoverText,
+      DEFAULT_THEME_SETTINGS.closeButtonHoverText,
+    ),
+  };
 }
 
 export function parseShortcutSettings(rawSettings: unknown): ShortcutSettings {
-  return shortcutSettingsSchema.parse(rawSettings ?? {});
+  const settings = readRecord(rawSettings);
+  const toggleControlsKey = normalizeShortcutKey(settings.toggleControlsKey);
+
+  return {
+    activationShortcut: isActivationShortcut(settings.activationShortcut)
+      ? settings.activationShortcut
+      : DEFAULT_SHORTCUT_SETTINGS.activationShortcut,
+    hideControlsByDefault: parseBooleanSetting(
+      settings.hideControlsByDefault,
+      DEFAULT_SHORTCUT_SETTINGS.hideControlsByDefault,
+    ),
+    toggleControlsKey:
+      toggleControlsKey || DEFAULT_SHORTCUT_SETTINGS.toggleControlsKey,
+  };
 }
 
 export function parseSettings(rawSettings: unknown): ExtensionSettings {
@@ -170,11 +232,51 @@ export function parseSettings(rawSettings: unknown): ExtensionSettings {
 export function parseThemeSettingsPatch(
   rawSettings: unknown,
 ): Partial<ThemeSettings> {
-  return partialThemeSettingsSchema.parse(rawSettings ?? {});
+  const settings = readRecord(rawSettings);
+  const patch: Partial<ThemeSettings> = {};
+
+  for (const key of COLOR_KEYS) {
+    if (key in settings) {
+      patch[key] = parseColorSetting(
+        settings[key],
+        DEFAULT_THEME_SETTINGS[key],
+      );
+    }
+  }
+
+  if ('buttonDisabledOpacity' in settings) {
+    patch.buttonDisabledOpacity = parseDisabledOpacity(
+      settings.buttonDisabledOpacity,
+    );
+  }
+
+  return patch;
 }
 
 export function parseShortcutSettingsPatch(
   rawSettings: unknown,
 ): Partial<ShortcutSettings> {
-  return partialShortcutSettingsSchema.parse(rawSettings ?? {});
+  const settings = readRecord(rawSettings);
+  const patch: Partial<ShortcutSettings> = {};
+
+  if ('activationShortcut' in settings) {
+    patch.activationShortcut = isActivationShortcut(settings.activationShortcut)
+      ? settings.activationShortcut
+      : DEFAULT_SHORTCUT_SETTINGS.activationShortcut;
+  }
+
+  if ('hideControlsByDefault' in settings) {
+    patch.hideControlsByDefault = parseBooleanSetting(
+      settings.hideControlsByDefault,
+      DEFAULT_SHORTCUT_SETTINGS.hideControlsByDefault,
+    );
+  }
+
+  if ('toggleControlsKey' in settings) {
+    patch.toggleControlsKey =
+      normalizeShortcutKey(settings.toggleControlsKey) ||
+      DEFAULT_SHORTCUT_SETTINGS.toggleControlsKey;
+  }
+
+  return patch;
 }
