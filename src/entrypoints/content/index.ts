@@ -1,5 +1,6 @@
 import './style.css';
 
+import { type OverlayState } from '@/types/overlayTypes';
 import { ACTIVATION_SHORTCUTS, normalizeShortcutKey } from '@/utils/shortcuts';
 import {
   DEFAULT_SHORTCUT_SETTINGS,
@@ -39,38 +40,7 @@ export default defineContentScript({
     let lastPointerClientX = 0;
     let lastPointerClientY = 0;
     let hoveredImage: HTMLImageElement | null = null;
-    let overlayOpen = false;
-    let activeImageSrc: string | null = null;
-
-    let scale = 1;
-    let fitScale = 1;
-    let minScale = 1;
-    let maxScale = 1;
-    let translateX = 0;
-    let translateY = 0;
-
-    let isDragging = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
-    let startTranslateX = 0;
-    let startTranslateY = 0;
-    let suppressBackdropClick = false;
-
-    let naturalWidth = 0;
-    let naturalHeight = 0;
-
-    let overlayEl: HTMLDivElement | null = null;
-    let backdropEl: HTMLDivElement | null = null;
-    let stageEl: HTMLDivElement | null = null;
-    let shellEl: HTMLDivElement | null = null;
-    let displayImgEl: HTMLImageElement | null = null;
-    let closeBtnEl: HTMLButtonElement | null = null;
-    let toolbarEl: HTMLDivElement | null = null;
-    let zoomInBtnEl: HTMLButtonElement | null = null;
-    let zoomOutBtnEl: HTMLButtonElement | null = null;
-    let resetBtnEl: HTMLButtonElement | null = null;
-    let overlayAbortController: AbortController | null = null;
-    let controlsHidden = false;
+    let overlayState: OverlayState | null = null;
     let currentThemeSettings: ThemeSettings = { ...DEFAULT_THEME_SETTINGS };
     let currentShortcutSettings: ShortcutSettings = {
       ...DEFAULT_SHORTCUT_SETTINGS,
@@ -104,8 +74,8 @@ export default defineContentScript({
           currentThemeSettings = parseThemeSettings(settings);
           applyCurrentShortcutSettings(parseShortcutSettings(settings));
 
-          if (overlayEl) {
-            applyThemeSettings(overlayEl, currentThemeSettings);
+          if (overlayState) {
+            applyThemeSettings(overlayState.elements.overlay, currentThemeSettings);
           }
         })
         .catch(() => {
@@ -125,8 +95,8 @@ export default defineContentScript({
         ...patch,
       });
 
-      if (overlayEl) {
-        applyThemeSettings(overlayEl, currentThemeSettings);
+      if (overlayState) {
+        applyThemeSettings(overlayState.elements.overlay, currentThemeSettings);
       }
     }
 
@@ -145,21 +115,20 @@ export default defineContentScript({
       );
     }
 
-    function applyControlsVisibility(): void {
-      if (!overlayEl) {
-        return;
-      }
-
-      overlayEl.classList.toggle('iz-controls-hidden', controlsHidden);
+    function applyControlsVisibility(state: OverlayState): void {
+      state.elements.overlay.classList.toggle(
+        'iz-controls-hidden',
+        state.ui.controlsHidden,
+      );
     }
 
     function toggleControlsVisibility(): void {
-      if (!overlayOpen) {
+      if (!overlayState) {
         return;
       }
 
-      controlsHidden = !controlsHidden;
-      applyControlsVisibility();
+      overlayState.ui.controlsHidden = !overlayState.ui.controlsHidden;
+      applyControlsVisibility(overlayState);
     }
 
     function getViewportBounds(): { width: number; height: number } {
@@ -299,82 +268,76 @@ export default defineContentScript({
       return null;
     }
 
-    function computeFitScale(): number {
-      if (naturalWidth <= 0 || naturalHeight <= 0) {
+    function computeFitScale(state: OverlayState): number {
+      if (state.image.naturalWidth <= 0 || state.image.naturalHeight <= 0) {
         return 1;
       }
 
       const bounds = getViewportBounds();
       return Math.min(
-        bounds.width / naturalWidth,
-        bounds.height / naturalHeight,
+        bounds.width / state.image.naturalWidth,
+        bounds.height / state.image.naturalHeight,
         1,
       );
     }
 
-    function clampTranslation(): void {
-      if (!overlayOpen || naturalWidth <= 0 || naturalHeight <= 0) {
+    function clampTranslation(state: OverlayState): void {
+      if (state.image.naturalWidth <= 0 || state.image.naturalHeight <= 0) {
         return;
       }
 
       const bounds = getViewportBounds();
-      const renderedW = naturalWidth * scale;
-      const renderedH = naturalHeight * scale;
+      const renderedW = state.image.naturalWidth * state.zoom.scale;
+      const renderedH = state.image.naturalHeight * state.zoom.scale;
 
       const maxX = Math.max(0, (renderedW - bounds.width) / 2);
       const maxY = Math.max(0, (renderedH - bounds.height) / 2);
 
-      translateX = clamp(translateX, -maxX, maxX);
-      translateY = clamp(translateY, -maxY, maxY);
+      state.pan.translateX = clamp(state.pan.translateX, -maxX, maxX);
+      state.pan.translateY = clamp(state.pan.translateY, -maxY, maxY);
     }
 
-    function updateButtonState(): void {
-      if (!zoomOutBtnEl || !zoomInBtnEl || !resetBtnEl) {
-        return;
-      }
-
-      zoomOutBtnEl.disabled = scale <= minScale + 0.0001;
-      zoomInBtnEl.disabled = scale >= maxScale - 0.0001;
+    function updateButtonState(state: OverlayState): void {
+      state.elements.zoomOutButton.disabled =
+        state.zoom.scale <= state.zoom.minScale + 0.0001;
+      state.elements.zoomInButton.disabled =
+        state.zoom.scale >= state.zoom.maxScale - 0.0001;
 
       const isReset =
-        Math.abs(scale - fitScale) <= 0.0001 &&
-        Math.abs(translateX) <= 0.5 &&
-        Math.abs(translateY) <= 0.5;
-      resetBtnEl.disabled = isReset;
+        Math.abs(state.zoom.scale - state.zoom.fitScale) <= 0.0001 &&
+        Math.abs(state.pan.translateX) <= 0.5 &&
+        Math.abs(state.pan.translateY) <= 0.5;
+      state.elements.resetButton.disabled = isReset;
     }
 
-    function applyTransform(): void {
-      if (!shellEl) {
-        return;
-      }
-
-      shellEl.style.transform = `translate(-50%, -50%) translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    function applyTransform(state: OverlayState): void {
+      state.elements.shell.style.transform = `translate(-50%, -50%) translate(${state.pan.translateX}px, ${state.pan.translateY}px) scale(${state.zoom.scale})`;
 
       const dragCursor =
-        scale > fitScale + 0.0001
-          ? isDragging
+        state.zoom.scale > state.zoom.fitScale + 0.0001
+          ? state.drag.active
             ? 'grabbing'
             : 'grab'
           : 'default';
 
-      if (displayImgEl) {
-        displayImgEl.style.cursor = dragCursor;
-      }
+      state.elements.displayImage.style.cursor = dragCursor;
+      state.elements.stage.style.cursor = dragCursor;
 
-      if (stageEl) {
-        stageEl.style.cursor = dragCursor;
-      }
-
-      updateButtonState();
+      updateButtonState(state);
     }
 
     function zoomAt(clientX: number, clientY: number, factor: number): void {
-      if (!overlayOpen || !shellEl) {
+      const state = overlayState;
+      if (!state) {
         return;
       }
 
-      const prevScale = scale;
-      const nextScale = clamp(prevScale * factor, minScale, maxScale);
+      const prevScale = state.zoom.scale;
+      const nextScale = clamp(
+        prevScale * factor,
+        state.zoom.minScale,
+        state.zoom.maxScale,
+      );
       if (Math.abs(nextScale - prevScale) < 0.00001) {
         return;
       }
@@ -383,27 +346,28 @@ export default defineContentScript({
       const dy = clientY - window.innerHeight / 2;
       const ratio = nextScale / prevScale;
 
-      translateX = dx - (dx - translateX) * ratio;
-      translateY = dy - (dy - translateY) * ratio;
-      scale = nextScale;
+      state.pan.translateX = dx - (dx - state.pan.translateX) * ratio;
+      state.pan.translateY = dy - (dy - state.pan.translateY) * ratio;
+      state.zoom.scale = nextScale;
 
-      clampTranslation();
-      applyTransform();
+      clampTranslation(state);
+      applyTransform(state);
     }
 
     function resetView(): void {
-      scale = fitScale;
-      translateX = 0;
-      translateY = 0;
-      clampTranslation();
-      applyTransform();
-    }
-
-    function onWheel(event: WheelEvent): void {
-      if (!overlayOpen) {
+      const state = overlayState;
+      if (!state) {
         return;
       }
 
+      state.zoom.scale = state.zoom.fitScale;
+      state.pan.translateX = 0;
+      state.pan.translateY = 0;
+      clampTranslation(state);
+      applyTransform(state);
+    }
+
+    function onWheel(event: WheelEvent): void {
       event.preventDefault();
       zoomAt(
         event.clientX,
@@ -413,199 +377,229 @@ export default defineContentScript({
     }
 
     function onPointerDown(event: PointerEvent): void {
-      if (!overlayOpen || event.button !== 0 || scale <= fitScale + 0.0001) {
+      const state = overlayState;
+      if (
+        !state ||
+        event.button !== 0 ||
+        state.zoom.scale <= state.zoom.fitScale + 0.0001
+      ) {
         return;
       }
 
-      isDragging = true;
-      suppressBackdropClick = false;
-      dragStartX = event.clientX;
-      dragStartY = event.clientY;
-      startTranslateX = translateX;
-      startTranslateY = translateY;
+      state.drag.active = true;
+      state.ui.suppressBackdropClick = false;
+      state.drag.startX = event.clientX;
+      state.drag.startY = event.clientY;
+      state.drag.startTranslateX = state.pan.translateX;
+      state.drag.startTranslateY = state.pan.translateY;
 
-      if (stageEl && typeof stageEl.setPointerCapture === 'function') {
+      if (typeof state.elements.stage.setPointerCapture === 'function') {
         try {
-          stageEl.setPointerCapture(event.pointerId);
+          state.elements.stage.setPointerCapture(event.pointerId);
         } catch {
           // Ignore capture failures.
         }
       }
 
       event.preventDefault();
-      applyTransform();
+      applyTransform(state);
     }
 
     function onPointerMove(event: PointerEvent): void {
-      if (!overlayOpen || !isDragging) {
+      const state = overlayState;
+      if (!state || !state.drag.active) {
         return;
       }
 
-      const dx = event.clientX - dragStartX;
-      const dy = event.clientY - dragStartY;
+      const dx = event.clientX - state.drag.startX;
+      const dy = event.clientY - state.drag.startY;
 
       if (Math.abs(dx) + Math.abs(dy) > 2) {
-        suppressBackdropClick = true;
+        state.ui.suppressBackdropClick = true;
       }
 
-      translateX = startTranslateX + dx;
-      translateY = startTranslateY + dy;
+      state.pan.translateX = state.drag.startTranslateX + dx;
+      state.pan.translateY = state.drag.startTranslateY + dy;
 
-      clampTranslation();
-      applyTransform();
+      clampTranslation(state);
+      applyTransform(state);
       event.preventDefault();
     }
 
     function stopDragging(event?: PointerEvent): void {
-      if (!isDragging) {
+      const state = overlayState;
+      if (!state || !state.drag.active) {
         return;
       }
 
-      isDragging = false;
+      state.drag.active = false;
 
       if (
         event &&
-        stageEl &&
-        typeof stageEl.hasPointerCapture === 'function' &&
-        typeof stageEl.releasePointerCapture === 'function'
+        typeof state.elements.stage.hasPointerCapture === 'function' &&
+        typeof state.elements.stage.releasePointerCapture === 'function'
       ) {
         try {
-          if (stageEl.hasPointerCapture(event.pointerId)) {
-            stageEl.releasePointerCapture(event.pointerId);
+          if (state.elements.stage.hasPointerCapture(event.pointerId)) {
+            state.elements.stage.releasePointerCapture(event.pointerId);
           }
         } catch {
           // Ignore capture failures.
         }
       }
 
-      applyTransform();
+      applyTransform(state);
     }
 
     function onResize(): void {
-      if (!overlayOpen || naturalWidth <= 0 || naturalHeight <= 0) {
+      const state = overlayState;
+      if (
+        !state ||
+        state.image.naturalWidth <= 0 ||
+        state.image.naturalHeight <= 0
+      ) {
         return;
       }
 
-      fitScale = computeFitScale();
-      minScale = fitScale;
-      maxScale = fitScale * MAX_ZOOM_MULTIPLIER;
+      state.zoom.fitScale = computeFitScale(state);
+      state.zoom.minScale = state.zoom.fitScale;
+      state.zoom.maxScale = state.zoom.fitScale * MAX_ZOOM_MULTIPLIER;
 
-      scale = clamp(scale, minScale, maxScale);
-      clampTranslation();
-      applyTransform();
+      state.zoom.scale = clamp(
+        state.zoom.scale,
+        state.zoom.minScale,
+        state.zoom.maxScale,
+      );
+      clampTranslation(state);
+      applyTransform(state);
     }
 
     function closeOverlay(): void {
-      if (!overlayOpen) {
+      const state = overlayState;
+      if (!state) {
         return;
       }
 
-      overlayOpen = false;
-      activeImageSrc = null;
-      isDragging = false;
-      suppressBackdropClick = false;
-      controlsHidden = false;
+      overlayState = null;
+      state.abortController.abort();
 
-      if (overlayAbortController) {
-        overlayAbortController.abort();
-        overlayAbortController = null;
+      if (state.elements.overlay.isConnected) {
+        state.elements.overlay.remove();
       }
-
-      if (overlayEl?.isConnected) {
-        overlayEl.remove();
-      }
-
-      naturalWidth = 0;
-      naturalHeight = 0;
-      scale = 1;
-      fitScale = 1;
-      minScale = 1;
-      maxScale = 1;
-      translateX = 0;
-      translateY = 0;
-
-      overlayEl = null;
-      backdropEl = null;
-      stageEl = null;
-      shellEl = null;
-      displayImgEl = null;
-      closeBtnEl = null;
-      toolbarEl = null;
-      zoomInBtnEl = null;
-      zoomOutBtnEl = null;
-      resetBtnEl = null;
     }
 
-    function buildOverlay(imageAlt: string): void {
-      if (!activeImageSrc) {
-        return;
-      }
+    function createOverlayState(imageSrc: string, imageAlt: string): OverlayState {
+      const overlay = document.createElement('div');
+      overlay.className = 'iz-overlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.style.zIndex = String(OVERLAY_Z_INDEX);
+      applyThemeSettings(overlay, currentThemeSettings);
 
-      overlayEl = document.createElement('div');
-      overlayEl.className = 'iz-overlay';
-      overlayEl.setAttribute('role', 'dialog');
-      overlayEl.setAttribute('aria-modal', 'true');
-      overlayEl.style.zIndex = String(OVERLAY_Z_INDEX);
-      applyThemeSettings(overlayEl, currentThemeSettings);
+      const backdrop = document.createElement('div');
+      backdrop.className = 'iz-backdrop';
 
-      backdropEl = document.createElement('div');
-      backdropEl.className = 'iz-backdrop';
+      const stage = document.createElement('div');
+      stage.className = 'iz-stage';
 
-      stageEl = document.createElement('div');
-      stageEl.className = 'iz-stage';
+      const shell = document.createElement('div');
+      shell.className = 'iz-shell';
 
-      shellEl = document.createElement('div');
-      shellEl.className = 'iz-shell';
+      const displayImage = document.createElement('img');
+      displayImage.className = 'iz-image';
+      displayImage.alt = imageAlt;
+      displayImage.draggable = false;
 
-      displayImgEl = document.createElement('img');
-      displayImgEl.className = 'iz-image';
-      displayImgEl.alt = imageAlt;
-      displayImgEl.draggable = false;
+      shell.appendChild(displayImage);
+      stage.appendChild(shell);
 
-      shellEl.appendChild(displayImgEl);
-      stageEl.appendChild(shellEl);
+      const closeButton = document.createElement('button');
+      closeButton.type = 'button';
+      closeButton.className = 'iz-btn iz-close';
+      closeButton.setAttribute('aria-label', 'Close image zoom');
+      closeButton.textContent = 'x';
 
-      closeBtnEl = document.createElement('button');
-      closeBtnEl.type = 'button';
-      closeBtnEl.className = 'iz-btn iz-close';
-      closeBtnEl.setAttribute('aria-label', 'Close image zoom');
-      closeBtnEl.textContent = 'x';
+      const toolbar = document.createElement('div');
+      toolbar.className = 'iz-toolbar';
 
-      toolbarEl = document.createElement('div');
-      toolbarEl.className = 'iz-toolbar';
+      const zoomOutButton = document.createElement('button');
+      zoomOutButton.type = 'button';
+      zoomOutButton.className = 'iz-btn';
+      zoomOutButton.setAttribute('aria-label', 'Zoom out');
+      zoomOutButton.textContent = '-';
 
-      zoomOutBtnEl = document.createElement('button');
-      zoomOutBtnEl.type = 'button';
-      zoomOutBtnEl.className = 'iz-btn';
-      zoomOutBtnEl.setAttribute('aria-label', 'Zoom out');
-      zoomOutBtnEl.textContent = '-';
+      const zoomInButton = document.createElement('button');
+      zoomInButton.type = 'button';
+      zoomInButton.className = 'iz-btn';
+      zoomInButton.setAttribute('aria-label', 'Zoom in');
+      zoomInButton.textContent = '+';
 
-      zoomInBtnEl = document.createElement('button');
-      zoomInBtnEl.type = 'button';
-      zoomInBtnEl.className = 'iz-btn';
-      zoomInBtnEl.setAttribute('aria-label', 'Zoom in');
-      zoomInBtnEl.textContent = '+';
+      const resetButton = document.createElement('button');
+      resetButton.type = 'button';
+      resetButton.className = 'iz-btn iz-reset';
+      resetButton.setAttribute('aria-label', 'Reset to fit');
+      resetButton.textContent = 'Fit';
 
-      resetBtnEl = document.createElement('button');
-      resetBtnEl.type = 'button';
-      resetBtnEl.className = 'iz-btn iz-reset';
-      resetBtnEl.setAttribute('aria-label', 'Reset to fit');
-      resetBtnEl.textContent = 'Fit';
+      toolbar.append(zoomOutButton, zoomInButton, resetButton);
+      overlay.append(backdrop, stage, closeButton, toolbar);
 
-      toolbarEl.append(zoomOutBtnEl, zoomInBtnEl, resetBtnEl);
-      overlayEl.append(backdropEl, stageEl, closeBtnEl, toolbarEl);
+      return {
+        elements: {
+          overlay,
+          backdrop,
+          stage,
+          shell,
+          displayImage,
+          closeButton,
+          toolbar,
+          zoomInButton,
+          zoomOutButton,
+          resetButton,
+        },
+        zoom: {
+          scale: 1,
+          fitScale: 1,
+          minScale: 1,
+          maxScale: 1,
+        },
+        pan: {
+          translateX: 0,
+          translateY: 0,
+        },
+        drag: {
+          active: false,
+          startX: 0,
+          startY: 0,
+          startTranslateX: 0,
+          startTranslateY: 0,
+        },
+        image: {
+          src: imageSrc,
+          alt: imageAlt,
+          naturalWidth: 0,
+          naturalHeight: 0,
+        },
+        ui: {
+          controlsHidden: currentShortcutSettings.hideControlsByDefault,
+          suppressBackdropClick: false,
+        },
+        abortController: new AbortController(),
+      };
+    }
 
-      (document.body || document.documentElement).appendChild(overlayEl);
-      applyControlsVisibility();
+    function buildOverlay(state: OverlayState): void {
+      (document.body || document.documentElement).appendChild(state.elements.overlay);
+      applyControlsVisibility(state);
 
       window.requestAnimationFrame(() => {
-        overlayEl?.classList.add('iz-open');
+        if (overlayState === state) {
+          state.elements.overlay.classList.add('iz-open');
+        }
       });
 
-      overlayAbortController = new AbortController();
-      const { signal } = overlayAbortController;
+      const { signal } = state.abortController;
 
-      overlayEl.addEventListener(
+      state.elements.overlay.addEventListener(
         'wheel',
         event => {
           event.preventDefault();
@@ -613,7 +607,7 @@ export default defineContentScript({
         { passive: false, signal },
       );
 
-      overlayEl.addEventListener(
+      state.elements.overlay.addEventListener(
         'touchmove',
         event => {
           event.preventDefault();
@@ -621,7 +615,7 @@ export default defineContentScript({
         { passive: false, signal },
       );
 
-      overlayEl.addEventListener(
+      state.elements.overlay.addEventListener(
         'click',
         event => {
           const targetEl =
@@ -630,64 +624,75 @@ export default defineContentScript({
             !!targetEl &&
             !!targetEl.closest('.iz-shell, .iz-toolbar, .iz-close');
 
-          if (!clickedInsideViewer && !suppressBackdropClick) {
+          if (!clickedInsideViewer && !state.ui.suppressBackdropClick) {
             closeOverlay();
           }
 
-          suppressBackdropClick = false;
+          state.ui.suppressBackdropClick = false;
         },
         { signal },
       );
 
-      closeBtnEl.addEventListener('click', closeOverlay, { signal });
-      zoomInBtnEl.addEventListener(
+      state.elements.closeButton.addEventListener('click', closeOverlay, { signal });
+      state.elements.zoomInButton.addEventListener(
         'click',
         () => {
           zoomAt(window.innerWidth / 2, window.innerHeight / 2, ZOOM_STEP);
         },
         { signal },
       );
-      zoomOutBtnEl.addEventListener(
+      state.elements.zoomOutButton.addEventListener(
         'click',
         () => {
           zoomAt(window.innerWidth / 2, window.innerHeight / 2, 1 / ZOOM_STEP);
         },
         { signal },
       );
-      resetBtnEl.addEventListener('click', resetView, { signal });
+      state.elements.resetButton.addEventListener('click', resetView, { signal });
 
-      stageEl.addEventListener('wheel', onWheel, { passive: false, signal });
-      stageEl.addEventListener('pointerdown', onPointerDown, { signal });
-      stageEl.addEventListener('pointermove', onPointerMove, { signal });
-      stageEl.addEventListener('pointerup', stopDragging, { signal });
-      stageEl.addEventListener('pointercancel', stopDragging, { signal });
-      stageEl.addEventListener('lostpointercapture', stopDragging, { signal });
+      state.elements.stage.addEventListener('wheel', onWheel, {
+        passive: false,
+        signal,
+      });
+      state.elements.stage.addEventListener('pointerdown', onPointerDown, { signal });
+      state.elements.stage.addEventListener('pointermove', onPointerMove, { signal });
+      state.elements.stage.addEventListener('pointerup', stopDragging, { signal });
+      state.elements.stage.addEventListener('pointercancel', stopDragging, { signal });
+      state.elements.stage.addEventListener('lostpointercapture', stopDragging, {
+        signal,
+      });
       window.addEventListener('resize', onResize, { signal });
 
-      displayImgEl.addEventListener(
+      state.elements.displayImage.addEventListener(
         'load',
         () => {
-          if (!displayImgEl) {
+          if (overlayState !== state) {
             return;
           }
 
-          naturalWidth = Math.max(displayImgEl.naturalWidth || 1, 1);
-          naturalHeight = Math.max(displayImgEl.naturalHeight || 1, 1);
+          state.image.naturalWidth = Math.max(
+            state.elements.displayImage.naturalWidth || 1,
+            1,
+          );
+          state.image.naturalHeight = Math.max(
+            state.elements.displayImage.naturalHeight || 1,
+            1,
+          );
 
-          fitScale = computeFitScale();
-          minScale = fitScale;
-          maxScale = fitScale * MAX_ZOOM_MULTIPLIER;
-          scale = fitScale;
-          translateX = 0;
-          translateY = 0;
+          state.zoom.fitScale = computeFitScale(state);
+          state.zoom.minScale = state.zoom.fitScale;
+          state.zoom.maxScale = state.zoom.fitScale * MAX_ZOOM_MULTIPLIER;
+          state.zoom.scale = state.zoom.fitScale;
+          state.pan.translateX = 0;
+          state.pan.translateY = 0;
 
-          clampTranslation();
-          applyTransform();
+          clampTranslation(state);
+          applyTransform(state);
         },
         { once: true, signal },
       );
 
-      displayImgEl.addEventListener(
+      state.elements.displayImage.addEventListener(
         'error',
         () => {
           closeOverlay();
@@ -695,12 +700,12 @@ export default defineContentScript({
         { once: true, signal },
       );
 
-      displayImgEl.src = activeImageSrc;
-      applyTransform();
+      state.elements.displayImage.src = state.image.src;
+      applyTransform(state);
     }
 
     function openOverlayForImage(img: HTMLImageElement): void {
-      if (overlayOpen || !isVisibleImage(img)) {
+      if (overlayState || !isVisibleImage(img)) {
         return;
       }
 
@@ -709,18 +714,16 @@ export default defineContentScript({
         return;
       }
 
-      activeImageSrc = src;
-      overlayOpen = true;
-      controlsHidden = currentShortcutSettings.hideControlsByDefault;
-
-      buildOverlay(sanitizeImageAltText(img.alt));
+      const state = createOverlayState(src, sanitizeImageAltText(img.alt));
+      overlayState = state;
+      buildOverlay(state);
     }
 
     function onGlobalPointerMove(event: PointerEvent): void {
       lastPointerClientX = event.clientX;
       lastPointerClientY = event.clientY;
 
-      if (overlayOpen) {
+      if (overlayState) {
         return;
       }
 
@@ -792,7 +795,7 @@ export default defineContentScript({
 
     function onGlobalKeyDown(event: KeyboardEvent): void {
       if (
-        overlayOpen &&
+        overlayState &&
         isToggleControlsKeyEvent(event) &&
         !isEditableTarget(event.target)
       ) {
@@ -801,13 +804,13 @@ export default defineContentScript({
         return;
       }
 
-      if (overlayOpen && event.key === 'Escape') {
+      if (overlayState && event.key === 'Escape') {
         event.preventDefault();
         closeOverlay();
         return;
       }
 
-      if (overlayOpen || isEditableTarget(event.target)) {
+      if (overlayState || isEditableTarget(event.target)) {
         return;
       }
 
