@@ -146,7 +146,7 @@ Microsoft Edge includes a built-in **Magnify image** feature that can also use `
 - `src/entrypoints/content`: content script and lightbox styles injected into web pages
 - `src/entrypoints/popup`: React popup UI for opening Settings
 - `src/entrypoints/options`: React settings page for shortcuts and theme customization
-- `src/utils`: browser, storage, color, shortcut, theme, and settings helpers
+- `src/utils`: WXT-backed settings storage, color, shortcut, theme, and settings helpers
 - `public/images`: packaged extension icons
 - `images`: README screenshots and demo assets
 
