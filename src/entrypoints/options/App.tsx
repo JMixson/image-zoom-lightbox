@@ -27,7 +27,7 @@ import {
   getStoredSettings,
   setStoredSetting,
   setStoredSettings,
-} from '@/utils/settings-storage';
+} from '@/utils/settingsStorage';
 import { applyThemeSettings } from '@/utils/theme';
 import { type ColorAlphaByKey, type ColorKey } from '@/types/colorTypes';
 import { type ColorFieldDefinition, type FormState } from '@/types/formTypes';
