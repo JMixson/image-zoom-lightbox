@@ -1,4 +1,5 @@
 import { defineConfig } from 'wxt';
+import pkg from './package.json' with { type: 'json' };
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
@@ -7,7 +8,7 @@ export default defineConfig({
   manifestVersion: 3,
   manifest: {
     name: 'Image Zoom Lightbox',
-    version: '2.0.2',
+    version: pkg.version,
     description:
       'Open an Edge-like image zoom lightbox with a configurable double-press shortcut while hovering an image.',
     permissions: ['storage'],
