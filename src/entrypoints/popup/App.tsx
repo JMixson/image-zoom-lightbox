@@ -1,9 +1,9 @@
-import { getChrome } from '@/utils/browser';
+import { browser } from 'wxt/browser';
 
 function App() {
   async function handleOpenOptions() {
     try {
-      await getChrome()?.runtime?.openOptionsPage?.();
+      await browser.runtime.openOptionsPage();
     } catch (error) {
       console.error('Failed to open options page:', error);
     }

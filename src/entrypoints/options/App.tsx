@@ -12,7 +12,6 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_THEME_SETTINGS,
   SETTING_LABELS,
-  STORED_SETTING_KEYS,
   parseSettings,
   type ExtensionSettings,
   type StoredSettingKey,
@@ -25,10 +24,10 @@ import {
 } from '@/utils/colors';
 import { normalizeShortcutKey } from '@/utils/shortcuts';
 import {
-  getStorageSync,
-  hasStorageSync,
-  setStorageSync,
-} from '@/utils/storage';
+  getStoredSettings,
+  setStoredSetting,
+  setStoredSettings,
+} from '@/utils/settings-storage';
 import { applyThemeSettings } from '@/utils/theme';
 import { type ColorAlphaByKey, type ColorKey } from '@/types/colorTypes';
 import { type ColorFieldDefinition, type FormState } from '@/types/formTypes';
@@ -226,7 +225,6 @@ function ColorField({
 
 function App() {
   const previewRef = useRef<HTMLDivElement | null>(null);
-  const [storageAvailable] = useState(() => hasStorageSync());
   const [status, setStatus] = useState<StatusState>({
     isError: false,
     message: '',
@@ -242,40 +240,38 @@ function App() {
   const previewSettings = parseSettings(
     formStateToRawSettings(formState, colorAlphaByKey),
   );
-  const isFormDisabled = isLoading || !storageAvailable;
+  const isFormDisabled = isLoading;
 
   useEffect(() => {
     let isActive = true;
 
-    if (!storageAvailable) {
-      setIsLoading(false);
-      setStatus({
-        isError: true,
-        message: 'Storage API is unavailable on this page.',
-      });
-      return () => {
-        isActive = false;
-      };
-    }
-
     void (async () => {
-      const initialSettings = parseSettings(
-        await getStorageSync(STORED_SETTING_KEYS),
-      );
-      if (!isActive) {
-        return;
-      }
+      try {
+        const initialSettings = await getStoredSettings();
+        if (!isActive) {
+          return;
+        }
 
-      const nextState = settingsToFormState(initialSettings);
-      setFormState(nextState.formState);
-      setColorAlphaByKey(nextState.colorAlphaByKey);
-      setIsLoading(false);
+        const nextState = settingsToFormState(initialSettings);
+        setFormState(nextState.formState);
+        setColorAlphaByKey(nextState.colorAlphaByKey);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setStatus({ isError: true, message: 'Failed to load settings.' });
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
     })();
 
     return () => {
       isActive = false;
     };
-  }, [storageAvailable]);
+  }, []);
 
   useEffect(() => {
     if (!previewRef.current) {
@@ -333,9 +329,10 @@ function App() {
     const sanitizedSettings = parseSettings(
       formStateToRawSettings(formState, colorAlphaByKey),
     );
-    const saved = await setStorageSync(sanitizedSettings);
 
-    if (!saved) {
+    try {
+      await setStoredSettings(sanitizedSettings);
+    } catch {
       setStatus({ isError: true, message: 'Failed to save settings.' });
       return;
     }
@@ -348,9 +345,10 @@ function App() {
 
   async function handleResetField(key: StoredSettingKey) {
     const resetValue = DEFAULT_SETTINGS[key];
-    const saved = await setStorageSync({ [key]: resetValue });
 
-    if (!saved) {
+    try {
+      await setStoredSetting(key, resetValue);
+    } catch {
       setStatus({ isError: true, message: 'Failed to reset setting.' });
       return;
     }
@@ -360,9 +358,9 @@ function App() {
   }
 
   async function handleResetDefaults() {
-    const saved = await setStorageSync({ ...DEFAULT_SETTINGS });
-
-    if (!saved) {
+    try {
+      await setStoredSettings(DEFAULT_SETTINGS);
+    } catch {
       setStatus({ isError: true, message: 'Failed to reset settings.' });
       return;
     }

@@ -4,19 +4,16 @@ import { ACTIVATION_SHORTCUTS, normalizeShortcutKey } from '@/utils/shortcuts';
 import {
   DEFAULT_SHORTCUT_SETTINGS,
   DEFAULT_THEME_SETTINGS,
-  STORED_SETTING_KEYS,
-  THEME_SETTING_KEYS,
-  SHORTCUT_SETTING_KEYS,
-  parseSettings,
   parseShortcutSettings,
-  parseShortcutSettingsPatch,
   parseThemeSettings,
-  parseThemeSettingsPatch,
   type ShortcutSettings,
   type ThemeSettings,
 } from '@/utils/settings';
-import { getChrome, type StorageChangeLike } from '@/utils/browser';
-import { getStorageSync, hasStorageSync } from '@/utils/storage';
+import {
+  getStoredSettings,
+  watchShortcutSettings,
+  watchThemeSettings,
+} from '@/utils/settingsStorage';
 import { applyThemeSettings } from '@/utils/theme';
 import { clamp } from '@/utils/colors';
 
@@ -24,7 +21,7 @@ export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
   runAt: 'document_idle',
   allFrames: false,
-  main() {
+  main(ctx) {
     if (window.top !== window) {
       return;
     }
@@ -78,7 +75,7 @@ export default defineContentScript({
     let currentShortcutSettings: ShortcutSettings = {
       ...DEFAULT_SHORTCUT_SETTINGS,
     };
-    let storedSettingsLoadPromise: Promise<ThemeSettings> | null = null;
+    let storedSettingsLoadPromise: Promise<void> | null = null;
 
     function sanitizeImageAltText(value: unknown): string {
       return typeof value === 'string'
@@ -97,75 +94,55 @@ export default defineContentScript({
       currentShortcutSettings = settings;
     }
 
-    function loadStoredSettings(): Promise<ThemeSettings> {
+    function loadStoredSettings(): Promise<void> {
       if (storedSettingsLoadPromise) {
         return storedSettingsLoadPromise;
       }
 
-      storedSettingsLoadPromise = getStorageSync(STORED_SETTING_KEYS)
-        .then(stored => {
-          const settings = parseSettings(stored);
+      storedSettingsLoadPromise = getStoredSettings()
+        .then(settings => {
           currentThemeSettings = parseThemeSettings(settings);
           applyCurrentShortcutSettings(parseShortcutSettings(settings));
 
           if (overlayEl) {
             applyThemeSettings(overlayEl, currentThemeSettings);
           }
-
-          return currentThemeSettings;
         })
         .catch(() => {
           storedSettingsLoadPromise = null;
-          return currentThemeSettings;
         });
 
       return storedSettingsLoadPromise;
     }
 
-    function handleStorageSettingsUpdates(
-      changes: Record<string, StorageChangeLike>,
-      areaName: string,
-    ): void {
-      if (areaName !== 'sync' || !changes || typeof changes !== 'object') {
+    function handleThemeSettingsUpdates(patch: Partial<ThemeSettings>): void {
+      if (Object.keys(patch).length === 0) {
         return;
       }
 
-      const themePatch: Record<string, unknown> = {};
-      const shortcutPatch: Record<string, unknown> = {};
+      currentThemeSettings = parseThemeSettings({
+        ...currentThemeSettings,
+        ...patch,
+      });
 
-      for (const key of THEME_SETTING_KEYS) {
-        const change = changes[key];
-        if (change) {
-          themePatch[key] = change.newValue;
-        }
+      if (overlayEl) {
+        applyThemeSettings(overlayEl, currentThemeSettings);
+      }
+    }
+
+    function handleShortcutSettingsUpdates(
+      patch: Partial<ShortcutSettings>,
+    ): void {
+      if (Object.keys(patch).length === 0) {
+        return;
       }
 
-      for (const key of SHORTCUT_SETTING_KEYS) {
-        const change = changes[key];
-        if (change) {
-          shortcutPatch[key] = change.newValue;
-        }
-      }
-
-      if (Object.keys(themePatch).length > 0) {
-        currentThemeSettings = parseThemeSettings({
-          ...currentThemeSettings,
-          ...parseThemeSettingsPatch(themePatch),
-        });
-
-        if (overlayEl) {
-          applyThemeSettings(overlayEl, currentThemeSettings);
-        }
-      }
-
-      if (Object.keys(shortcutPatch).length > 0) {
-        applyCurrentShortcutSettings(
-          parseShortcutSettings({
-            ...currentShortcutSettings,
-            ...parseShortcutSettingsPatch(shortcutPatch),
-          }),
-        );
-      }
+      applyCurrentShortcutSettings(
+        parseShortcutSettings({
+          ...currentShortcutSettings,
+          ...patch,
+        }),
+      );
     }
 
     function applyControlsVisibility(): void {
@@ -221,7 +198,6 @@ export default defineContentScript({
         if (!SAFE_IMAGE_PROTOCOLS.has(url.protocol)) {
           return null;
         }
-
       } catch {
         return null;
       }
@@ -856,13 +832,20 @@ export default defineContentScript({
       }
     }
 
-    document.addEventListener('pointermove', onGlobalPointerMove, true);
-    document.addEventListener('keydown', onGlobalKeyDown, true);
+    ctx.addEventListener(document, 'pointermove', onGlobalPointerMove, {
+      capture: true,
+    });
+    ctx.addEventListener(document, 'keydown', onGlobalKeyDown, {
+      capture: true,
+    });
 
-    const chromeApi = getChrome();
-    if (hasStorageSync() && chromeApi?.storage?.onChanged) {
-      chromeApi.storage.onChanged.addListener(handleStorageSettingsUpdates);
-    }
+    const unwatchThemeSettings = watchThemeSettings(handleThemeSettingsUpdates);
+    const unwatchShortcutSettings = watchShortcutSettings(
+      handleShortcutSettingsUpdates,
+    );
+    ctx.onInvalidated(closeOverlay);
+    ctx.onInvalidated(unwatchThemeSettings);
+    ctx.onInvalidated(unwatchShortcutSettings);
 
     void loadStoredSettings();
   },
