@@ -140,6 +140,13 @@ Microsoft Edge includes a built-in **Magnify image** feature that can also use `
 - Change this extension's activation shortcut in Settings
 - Turn off Edge's **Magnify image** setting at `edge://settings/privacy/sitePermissions/allPermissions/magnifyImages`
 
+## Limitations
+
+- Supports standard `<img>` elements only
+- Top frame only; no iframe support
+- No `background-image`, `canvas`, or `svg` support in this version
+- Does not run on restricted browser pages such as internal browser URLs
+
 ## Project Structure
 
 ```text
@@ -187,10 +194,3 @@ Microsoft Edge includes a built-in **Magnify image** feature that can also use `
 |-- wxt.config.ts                     # WXT config and shared manifest metadata
 `-- package.json                      # scripts, dependencies, and extension version
 ```
-
-## Limitations
-
-- Supports standard `<img>` elements only
-- Top frame only; no iframe support
-- No `background-image`, `canvas`, or `svg` support in this version
-- Does not run on restricted browser pages such as internal browser URLs
