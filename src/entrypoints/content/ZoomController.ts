@@ -1,5 +1,9 @@
-import { clamp } from '@/utils/colors';
+import { clamp } from '@/utils/math';
 import type { OverlayState, ViewportBounds } from '@/types/overlayTypes';
+
+const SCALE_EPSILON = 0.0001;
+const SCALE_CHANGE_EPSILON = 0.00001;
+const TRANSLATION_EPSILON = 0.5;
 
 type ZoomControllerOptions = {
   zoomStep?: number;
@@ -30,7 +34,7 @@ export class ZoomController {
   }
 
   canDrag(state: OverlayState): boolean {
-    return state.zoom.scale > state.zoom.fitScale + 0.0001;
+    return state.zoom.scale > state.zoom.fitScale + SCALE_EPSILON;
   }
 
   initializeLoadedImage(state: OverlayState): void {
@@ -82,7 +86,7 @@ export class ZoomController {
       state.zoom.minScale,
       state.zoom.maxScale,
     );
-    if (Math.abs(nextScale - prevScale) < 0.00001) {
+    if (Math.abs(nextScale - prevScale) < SCALE_CHANGE_EPSILON) {
       return;
     }
 
@@ -166,14 +170,14 @@ export class ZoomController {
 
   private updateButtonState(state: OverlayState): void {
     state.elements.zoomOutButton.disabled =
-      state.zoom.scale <= state.zoom.minScale + 0.0001;
+      state.zoom.scale <= state.zoom.minScale + SCALE_EPSILON;
     state.elements.zoomInButton.disabled =
-      state.zoom.scale >= state.zoom.maxScale - 0.0001;
+      state.zoom.scale >= state.zoom.maxScale - SCALE_EPSILON;
 
     const isReset =
-      Math.abs(state.zoom.scale - state.zoom.fitScale) <= 0.0001 &&
-      Math.abs(state.pan.translateX) <= 0.5 &&
-      Math.abs(state.pan.translateY) <= 0.5;
+      Math.abs(state.zoom.scale - state.zoom.fitScale) <= SCALE_EPSILON &&
+      Math.abs(state.pan.translateX) <= TRANSLATION_EPSILON &&
+      Math.abs(state.pan.translateY) <= TRANSLATION_EPSILON;
 
     state.elements.resetButton.disabled = isReset;
   }

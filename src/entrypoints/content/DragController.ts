@@ -1,15 +1,13 @@
 import type { OverlayState } from '@/types/overlayTypes';
 import { ZoomController } from './ZoomController';
 
+const DRAG_THRESHOLD_PX = 2;
+
 export class DragController {
   constructor(private readonly zoomController: ZoomController) {}
 
-  handlePointerDown(state: OverlayState | null, event: PointerEvent): void {
-    if (
-      !state ||
-      event.button !== 0 ||
-      !this.zoomController.canDrag(state)
-    ) {
+  handlePointerDown(state: OverlayState, event: PointerEvent): void {
+    if (event.button !== 0 || !this.zoomController.canDrag(state)) {
       return;
     }
 
@@ -32,15 +30,15 @@ export class DragController {
     this.zoomController.applyTransform(state);
   }
 
-  handlePointerMove(state: OverlayState | null, event: PointerEvent): void {
-    if (!state || !state.drag.active) {
+  handlePointerMove(state: OverlayState, event: PointerEvent): void {
+    if (!state.drag.active) {
       return;
     }
 
     const dx = event.clientX - state.drag.startX;
     const dy = event.clientY - state.drag.startY;
 
-    if (Math.abs(dx) + Math.abs(dy) > 2) {
+    if (Math.abs(dx) + Math.abs(dy) > DRAG_THRESHOLD_PX) {
       state.ui.suppressBackdropClick = true;
     }
 
@@ -51,8 +49,8 @@ export class DragController {
     event.preventDefault();
   }
 
-  stopDragging(state: OverlayState | null, event?: PointerEvent): void {
-    if (!state || !state.drag.active) {
+  stopDragging(state: OverlayState, event?: PointerEvent): void {
+    if (!state.drag.active) {
       return;
     }
 

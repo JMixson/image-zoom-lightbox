@@ -1,4 +1,5 @@
-import { clamp, isValidCssColor } from './colors';
+import { isValidCssColor } from './colors';
+import { clamp } from './math';
 import {
   isActivationShortcut,
   normalizeShortcutKey,
