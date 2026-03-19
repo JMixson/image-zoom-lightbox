@@ -2,6 +2,8 @@
 
 A browser extension that opens an Edge-style image lightbox when you use a configurable double-press shortcut while hovering an image.
 
+[Chrome Extension](https://chromewebstore.google.com/detail/image-zoom-lightbox/hlhkddoebkcjafoajhecgdmcjpbghhpe) | [Firefox Extension](https://addons.mozilla.org/en-US/firefox/addon/image-zoom-lightbox/)
+
 ## Preview
 
 ![Extension preview](images/demo.gif)
