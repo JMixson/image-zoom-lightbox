@@ -1,3 +1,5 @@
+import { clamp } from './math';
+
 export type RgbColor = {
   r: number;
   g: number;
@@ -7,10 +9,6 @@ export type RgbColor = {
 export type RgbaColor = RgbColor & {
   a: number;
 };
-
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
 
 function toHexChannel(value: number): string {
   const channel = clamp(Math.round(value), 0, 255);
