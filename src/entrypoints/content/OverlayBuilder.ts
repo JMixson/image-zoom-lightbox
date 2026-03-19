@@ -7,36 +7,46 @@ import type {
 } from '@/types/overlayTypes';
 
 const VIEWER_CLICK_SELECTOR = '.iz-shell, .iz-toolbar, .iz-close';
+const CLOSE_TRANSITION_BUFFER_MS = 50;
 
 type OverlayBuilderOptions = {
   overlayZIndex?: number;
+  documentRef?: Document;
+  windowRef?: Window;
+  closeTransitionMs?: number;
 };
 
 export class OverlayBuilder {
   private readonly overlayZIndex: number;
+  private readonly documentRef: Document;
+  private readonly windowRef: Window;
+  private readonly closeTransitionMs: number;
 
   constructor(options: OverlayBuilderOptions = {}) {
     this.overlayZIndex = options.overlayZIndex ?? 2147483000;
+    this.documentRef = options.documentRef ?? document;
+    this.windowRef = options.windowRef ?? window;
+    this.closeTransitionMs = options.closeTransitionMs ?? 220;
   }
 
   createState(options: OverlayCreateOptions): OverlayState {
-    const overlay = document.createElement('div');
+    const overlay = this.documentRef.createElement('div');
     overlay.className = 'iz-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
     overlay.style.zIndex = String(this.overlayZIndex);
     applyThemeSettings(overlay, options.themeSettings);
 
-    const backdrop = document.createElement('div');
+    const backdrop = this.documentRef.createElement('div');
     backdrop.className = 'iz-backdrop';
 
-    const stage = document.createElement('div');
+    const stage = this.documentRef.createElement('div');
     stage.className = 'iz-stage';
 
-    const shell = document.createElement('div');
+    const shell = this.documentRef.createElement('div');
     shell.className = 'iz-shell';
 
-    const displayImage = document.createElement('img');
+    const displayImage = this.documentRef.createElement('img');
     displayImage.className = 'iz-image';
     displayImage.alt = options.imageAlt;
     displayImage.draggable = false;
@@ -44,28 +54,28 @@ export class OverlayBuilder {
     shell.appendChild(displayImage);
     stage.appendChild(shell);
 
-    const closeButton = document.createElement('button');
+    const closeButton = this.documentRef.createElement('button');
     closeButton.type = 'button';
     closeButton.className = 'iz-btn iz-close';
     closeButton.setAttribute('aria-label', 'Close image zoom');
-    closeButton.textContent = 'x';
+    closeButton.textContent = '\u00D7';
 
-    const toolbar = document.createElement('div');
+    const toolbar = this.documentRef.createElement('div');
     toolbar.className = 'iz-toolbar';
 
-    const zoomOutButton = document.createElement('button');
+    const zoomOutButton = this.documentRef.createElement('button');
     zoomOutButton.type = 'button';
     zoomOutButton.className = 'iz-btn';
     zoomOutButton.setAttribute('aria-label', 'Zoom out');
     zoomOutButton.textContent = '-';
 
-    const zoomInButton = document.createElement('button');
+    const zoomInButton = this.documentRef.createElement('button');
     zoomInButton.type = 'button';
     zoomInButton.className = 'iz-btn';
     zoomInButton.setAttribute('aria-label', 'Zoom in');
     zoomInButton.textContent = '+';
 
-    const resetButton = document.createElement('button');
+    const resetButton = this.documentRef.createElement('button');
     resetButton.type = 'button';
     resetButton.className = 'iz-btn iz-reset';
     resetButton.setAttribute('aria-label', 'Reset to fit');
@@ -113,6 +123,7 @@ export class OverlayBuilder {
       ui: {
         controlsHidden: options.hideControlsByDefault,
         suppressBackdropClick: false,
+        closing: false,
       },
       abortController: new AbortController(),
     };
@@ -128,11 +139,13 @@ export class OverlayBuilder {
   }
 
   mount(state: OverlayState, handlers: OverlayEventHandlers): void {
-    (document.body || document.documentElement).appendChild(state.elements.overlay);
+    (
+      this.documentRef.body || this.documentRef.documentElement
+    ).appendChild(state.elements.overlay);
     this.applyControlsVisibility(state);
 
-    window.requestAnimationFrame(() => {
-      if (state.elements.overlay.isConnected) {
+    this.windowRef.requestAnimationFrame(() => {
+      if (state.elements.overlay.isConnected && !state.ui.closing) {
         state.elements.overlay.classList.add('iz-open');
       }
     });
@@ -213,7 +226,7 @@ export class OverlayBuilder {
       { signal },
     );
 
-    window.addEventListener('resize', handlers.onResize, { signal });
+    this.windowRef.addEventListener('resize', handlers.onResize, { signal });
 
     state.elements.displayImage.addEventListener('load', handlers.onImageLoad, {
       once: true,
@@ -231,18 +244,67 @@ export class OverlayBuilder {
     state.elements.displayImage.src = state.image.src;
   }
 
-  destroy(state: OverlayState): void {
+  destroy(state: OverlayState): Promise<void> {
+    state.ui.closing = true;
     state.abortController.abort();
 
-    if (state.elements.overlay.isConnected) {
-      state.elements.overlay.remove();
+    const { overlay, backdrop } = state.elements;
+    if (!overlay.isConnected) {
+      return Promise.resolve();
     }
+
+    if (!overlay.classList.contains('iz-open') || this.prefersReducedMotion()) {
+      overlay.remove();
+      return Promise.resolve();
+    }
+
+    overlay.classList.remove('iz-open');
+
+    return new Promise(resolve => {
+      let settled = false;
+
+      const cleanup = (): void => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        backdrop.removeEventListener('transitionend', onTransitionEnd);
+        this.windowRef.clearTimeout(timeoutId);
+
+        if (overlay.isConnected) {
+          overlay.remove();
+        }
+
+        resolve();
+      };
+
+      const onTransitionEnd = (event: TransitionEvent): void => {
+        if (event.target === backdrop && event.propertyName === 'opacity') {
+          cleanup();
+        }
+      };
+
+      const timeoutId = this.windowRef.setTimeout(
+        cleanup,
+        this.closeTransitionMs + CLOSE_TRANSITION_BUFFER_MS,
+      );
+
+      backdrop.addEventListener('transitionend', onTransitionEnd);
+    });
   }
 
   private applyControlsVisibility(state: OverlayState): void {
     state.elements.overlay.classList.toggle(
       'iz-controls-hidden',
       state.ui.controlsHidden,
+    );
+  }
+
+  private prefersReducedMotion(): boolean {
+    return (
+      typeof this.windowRef.matchMedia === 'function' &&
+      this.windowRef.matchMedia('(prefers-reduced-motion: reduce)').matches
     );
   }
 }
