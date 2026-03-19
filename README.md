@@ -142,13 +142,51 @@ Microsoft Edge includes a built-in **Magnify image** feature that can also use `
 
 ## Project Structure
 
-- `wxt.config.ts`: shared extension metadata, browser settings, and WXT config
-- `src/entrypoints/content`: content script and lightbox styles injected into web pages
-- `src/entrypoints/popup`: React popup UI for opening Settings
-- `src/entrypoints/options`: React settings page for shortcuts and theme customization
-- `src/utils`: WXT-backed settings storage, color, shortcut, theme, and settings helpers
-- `public/images`: packaged extension icons
-- `images`: README screenshots and demo assets
+```text
+.
+|-- public/
+|   |-- favicon.ico
+|   `-- images/
+|       |-- icon-16.png
+|       |-- icon-32.png
+|       |-- icon-48.png
+|       `-- icon-128.png
+|-- src/
+|   |-- entrypoints/
+|   |   |-- content/
+|   |   |   |-- index.ts              # content script orchestration
+|   |   |   |-- ActivationDetector.ts # double-press activation and shortcut matching
+|   |   |   |-- ImageResolver.ts      # hovered image lookup and source validation
+|   |   |   |-- SettingsManager.ts    # stored settings loading and watchers
+|   |   |   |-- OverlayBuilder.ts     # overlay DOM creation, theming, and teardown
+|   |   |   |-- ZoomController.ts     # fit, zoom, pan limits, and button states
+|   |   |   |-- DragController.ts     # pointer-driven panning behavior
+|   |   |   `-- style.css             # lightbox styles
+|   |   |-- options/                  # React settings page
+|   |   |   |-- App.tsx
+|   |   |   |-- main.tsx
+|   |   |   |-- index.html
+|   |   |   `-- style.css
+|   |   `-- popup/                    # React popup entrypoint
+|   |       |-- App.tsx
+|   |       |-- main.tsx
+|   |       |-- index.html
+|   |       `-- style.css
+|   |-- types/
+|   |   |-- overlayTypes.ts           # shared overlay state and event types
+|   |   |-- formTypes.ts              # options form value types
+|   |   `-- colorTypes.ts             # color-related shared types
+|   `-- utils/
+|       |-- settingsStorage.ts        # WXT storage access and watchers
+|       |-- settings.ts               # defaults, parsing, and validation
+|       |-- shortcuts.ts              # shortcut constants and normalization
+|       |-- theme.ts                  # CSS variable application for the overlay
+|       |-- colors.ts                 # CSS color validation helpers
+|       `-- math.ts                   # shared numeric helpers like clamp
+|-- images/                           # README screenshots and demo assets
+|-- wxt.config.ts                     # WXT config and shared manifest metadata
+`-- package.json                      # scripts, dependencies, and extension version
+```
 
 ## Limitations
 
