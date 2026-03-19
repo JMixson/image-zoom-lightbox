@@ -27,7 +27,6 @@ export default defineContentScript({
     }
 
     let overlayState: OverlayState | null = null;
-    let activationDetector!: ActivationDetector;
 
     const overlayBuilder = new OverlayBuilder({
       overlayZIndex: OVERLAY_Z_INDEX,
@@ -43,7 +42,13 @@ export default defineContentScript({
       viewportPaddingY: VIEWPORT_PADDING_Y,
     });
     const dragController = new DragController(zoomController);
-    const settingsManager = new SettingsManager({
+    const settingsManager = new SettingsManager();
+    const activationDetector = new ActivationDetector(
+      settingsManager.getShortcutSettings(),
+      { doubleActivationMs: DOUBLE_ACTIVATION_MS },
+    );
+
+    settingsManager.setCallbacks({
       onThemeChange: settings => {
         if (overlayState) {
           overlayBuilder.applyTheme(overlayState, settings);
@@ -54,19 +59,27 @@ export default defineContentScript({
       },
     });
 
-    activationDetector = new ActivationDetector(
-      settingsManager.getShortcutSettings(),
-      { doubleActivationMs: DOUBLE_ACTIVATION_MS },
-    );
-
     function closeOverlay(): void {
       const state = overlayState;
-      if (!state) {
+      if (!state || state.ui.closing) {
         return;
       }
 
-      overlayState = null;
-      overlayBuilder.destroy(state);
+      state.ui.closing = true;
+      void overlayBuilder.destroy(state).finally(() => {
+        if (overlayState === state) {
+          overlayState = null;
+        }
+      });
+    }
+
+    function runIfOverlayActive(
+      state: OverlayState,
+      callback: () => void,
+    ): void {
+      if (overlayState === state && !state.ui.closing) {
+        callback();
+      }
     }
 
     function mountOverlay(state: OverlayState): void {
@@ -117,19 +130,19 @@ export default defineContentScript({
           dragController.stopDragging(state, event);
         },
         onResize: () => {
-          if (overlayState === state) {
+          runIfOverlayActive(state, () => {
             zoomController.resize(state);
-          }
+          });
         },
         onImageLoad: () => {
-          if (overlayState === state) {
+          runIfOverlayActive(state, () => {
             zoomController.initializeLoadedImage(state);
-          }
+          });
         },
         onImageError: () => {
-          if (overlayState === state) {
+          runIfOverlayActive(state, () => {
             closeOverlay();
-          }
+          });
         },
       });
 
@@ -163,6 +176,14 @@ export default defineContentScript({
     }
 
     function onGlobalKeyDown(event: KeyboardEvent): void {
+      if (overlayState?.ui.closing) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+        }
+
+        return;
+      }
+
       if (
         overlayState &&
         activationDetector.matchesToggleControls(event) &&

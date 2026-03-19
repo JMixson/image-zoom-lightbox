@@ -41,6 +41,7 @@ export type OverlayState = {
   ui: {
     controlsHidden: boolean;
     suppressBackdropClick: boolean;
+    closing: boolean;
   };
   abortController: AbortController;
 };

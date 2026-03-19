@@ -18,13 +18,16 @@ type SettingsManagerOptions = {
 };
 
 export class SettingsManager {
+  private callbacks: SettingsManagerOptions;
   private currentThemeSettings: ThemeSettings = { ...DEFAULT_THEME_SETTINGS };
   private currentShortcutSettings: ShortcutSettings = {
     ...DEFAULT_SHORTCUT_SETTINGS,
   };
   private storedSettingsLoadPromise: Promise<void> | null = null;
 
-  constructor(private readonly options: SettingsManagerOptions = {}) {}
+  constructor(options: SettingsManagerOptions = {}) {
+    this.callbacks = { ...options };
+  }
 
   getThemeSettings(): ThemeSettings {
     return this.currentThemeSettings;
@@ -32,6 +35,13 @@ export class SettingsManager {
 
   getShortcutSettings(): ShortcutSettings {
     return this.currentShortcutSettings;
+  }
+
+  setCallbacks(callbacks: SettingsManagerOptions): void {
+    this.callbacks = {
+      ...this.callbacks,
+      ...callbacks,
+    };
   }
 
   load(): Promise<void> {
@@ -42,7 +52,7 @@ export class SettingsManager {
     this.storedSettingsLoadPromise = getStoredSettings()
       .then(settings => {
         this.currentThemeSettings = parseThemeSettings(settings);
-        this.options.onThemeChange?.(this.currentThemeSettings);
+        this.callbacks.onThemeChange?.(this.currentThemeSettings);
         this.applyShortcutSettings(parseShortcutSettings(settings));
       })
       .catch(() => {
@@ -62,7 +72,7 @@ export class SettingsManager {
         ...this.currentThemeSettings,
         ...patch,
       });
-      this.options.onThemeChange?.(this.currentThemeSettings);
+      this.callbacks.onThemeChange?.(this.currentThemeSettings);
     });
 
     const unwatchShortcutSettings = watchShortcutSettings(patch => {
@@ -86,6 +96,6 @@ export class SettingsManager {
 
   private applyShortcutSettings(settings: ShortcutSettings): void {
     this.currentShortcutSettings = settings;
-    this.options.onShortcutChange?.(this.currentShortcutSettings);
+    this.callbacks.onShortcutChange?.(this.currentShortcutSettings);
   }
 }
