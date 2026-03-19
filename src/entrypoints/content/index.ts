@@ -21,15 +21,23 @@ export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
   runAt: 'document_idle',
   allFrames: false,
-  main(ctx) {
+  cssInjectionMode: 'ui',
+  async main(ctx) {
     if (window.top !== window) {
       return;
     }
 
+    const overlayUi = await createShadowRootUi(ctx, {
+      name: 'iz-lightbox-overlay',
+      position: 'modal',
+      zIndex: OVERLAY_Z_INDEX,
+      onMount: uiContainer => uiContainer,
+    });
+
     let overlayState: OverlayState | null = null;
 
     const overlayBuilder = new OverlayBuilder({
-      overlayZIndex: OVERLAY_Z_INDEX,
+      mountTarget: overlayUi.uiContainer,
     });
     const imageResolver = new ImageResolver({
       maxImageAltLength: MAX_IMAGE_ALT_LENGTH,
@@ -67,6 +75,7 @@ export default defineContentScript({
 
       state.ui.closing = true;
       void overlayBuilder.destroy(state).finally(() => {
+        overlayUi.remove();
         if (overlayState === state) {
           overlayState = null;
         }
@@ -83,6 +92,10 @@ export default defineContentScript({
     }
 
     function mountOverlay(state: OverlayState): void {
+      if (!overlayUi.shadowHost.isConnected) {
+        overlayUi.mount();
+      }
+
       const zoomFromCenter = (direction: 'in' | 'out'): void => {
         zoomController.zoomAt(
           state,

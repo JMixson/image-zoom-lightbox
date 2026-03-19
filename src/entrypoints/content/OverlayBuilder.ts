@@ -10,22 +10,22 @@ const VIEWER_CLICK_SELECTOR = '.iz-shell, .iz-toolbar, .iz-close';
 const CLOSE_TRANSITION_BUFFER_MS = 50;
 
 type OverlayBuilderOptions = {
-  overlayZIndex?: number;
+  mountTarget: HTMLElement;
   documentRef?: Document;
   windowRef?: Window;
   closeTransitionMs?: number;
 };
 
 export class OverlayBuilder {
-  private readonly overlayZIndex: number;
+  private readonly mountTarget: HTMLElement;
   private readonly documentRef: Document;
   private readonly windowRef: Window;
   private readonly closeTransitionMs: number;
 
-  constructor(options: OverlayBuilderOptions = {}) {
-    this.overlayZIndex = options.overlayZIndex ?? 2147483000;
+  constructor(options: OverlayBuilderOptions) {
     this.documentRef = options.documentRef ?? document;
     this.windowRef = options.windowRef ?? window;
+    this.mountTarget = options.mountTarget;
     this.closeTransitionMs = options.closeTransitionMs ?? 220;
   }
 
@@ -34,7 +34,6 @@ export class OverlayBuilder {
     overlay.className = 'iz-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.style.zIndex = String(this.overlayZIndex);
     applyThemeSettings(overlay, options.themeSettings);
 
     const backdrop = this.documentRef.createElement('div');
@@ -139,9 +138,7 @@ export class OverlayBuilder {
   }
 
   mount(state: OverlayState, handlers: OverlayEventHandlers): void {
-    (
-      this.documentRef.body || this.documentRef.documentElement
-    ).appendChild(state.elements.overlay);
+    this.mountTarget.appendChild(state.elements.overlay);
     this.applyControlsVisibility(state);
 
     this.windowRef.requestAnimationFrame(() => {
