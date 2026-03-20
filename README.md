@@ -160,7 +160,14 @@ Microsoft Edge includes a built-in **Magnify image** feature that can also use `
 |       |-- icon-32.png
 |       |-- icon-48.png
 |       `-- icon-128.png
+|-- images/                           # README screenshots and demo assets
 |-- src/
+|   |-- components/                   # shared React UI for popup/options
+|   |   |-- CloseButtonSection.tsx
+|   |   |-- ColorField.tsx
+|   |   |-- KeyboardSection.tsx
+|   |   |-- PreviewPanel.tsx
+|   |   `-- ToolbarColorSection.tsx
 |   |-- entrypoints/
 |   |   |-- content/
 |   |   |   |-- index.ts              # content script orchestration
@@ -181,6 +188,8 @@ Microsoft Edge includes a built-in **Magnify image** feature that can also use `
 |   |       |-- main.tsx
 |   |       |-- index.html
 |   |       `-- style.css
+|   |-- hooks/
+|   |   `-- useSettings.ts            # shared settings loader for React entrypoints
 |   |-- types/
 |   |   |-- overlayTypes.ts           # shared overlay state and event types
 |   |   |-- formTypes.ts              # options form value types
@@ -191,8 +200,8 @@ Microsoft Edge includes a built-in **Magnify image** feature that can also use `
 |       |-- shortcuts.ts              # shortcut constants and normalization
 |       |-- theme.ts                  # CSS variable application for the overlay
 |       |-- colors.ts                 # CSS color validation helpers
+|       |-- formConversions.ts        # options form <-> stored settings mapping
 |       `-- math.ts                   # shared numeric helpers like clamp
-|-- images/                           # README screenshots and demo assets
 |-- wxt.config.ts                     # WXT config and shared manifest metadata
 `-- package.json                      # scripts, dependencies, and extension version
 ```
