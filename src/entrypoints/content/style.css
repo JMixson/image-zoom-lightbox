@@ -3,23 +3,26 @@
   box-sizing: border-box;
 }
 
+/* IMPORTANT: CSS variables are initialized via
+   getThemeCssVariables(DEFAULT_THEME_SETTINGS) in src/utils/theme.ts.
+   Keep in sync with DEFAULT_THEME_SETTINGS in src/utils/settings.ts. */
 .iz-overlay {
   position: fixed;
   inset: 0;
   font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
-  --iz-button-bg: rgba(255, 255, 255, 0.13);
-  --iz-button-text: rgba(255, 255, 255, 0.92);
-  --iz-button-hover-bg: rgba(255, 255, 255, 0.22);
-  --iz-button-hover-text: #fff;
-  --iz-button-active-bg: rgba(255, 255, 255, 0.1);
-  --iz-button-disabled-opacity: 0.28;
-  --iz-close-bg: rgba(18, 18, 22, 0.68);
-  --iz-close-text: rgba(255, 255, 255, 0.75);
-  --iz-close-hover-bg: rgba(255, 255, 255, 0.14);
-  --iz-close-hover-text: #fff;
-  --iz-reset-text: rgba(255, 255, 255, 0.75);
-  --iz-reset-hover-bg: rgba(255, 255, 255, 0.12);
-  --iz-reset-hover-text: #fff;
+  --iz-button-bg: initial;
+  --iz-button-text: initial;
+  --iz-button-hover-bg: initial;
+  --iz-button-hover-text: initial;
+  --iz-button-active-bg: initial;
+  --iz-button-disabled-opacity: initial;
+  --iz-close-bg: initial;
+  --iz-close-text: initial;
+  --iz-close-hover-bg: initial;
+  --iz-close-hover-text: initial;
+  --iz-reset-text: initial;
+  --iz-reset-hover-bg: initial;
+  --iz-reset-hover-text: initial;
 }
 
 /* ── Backdrop ─────────────────────────────────────────── */
