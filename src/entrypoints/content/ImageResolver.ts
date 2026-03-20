@@ -12,6 +12,7 @@ export class ImageResolver {
   private readonly safeImageProtocols: Set<string>;
 
   private hoveredImage: HTMLImageElement | null = null;
+  private hasPointerPosition = false;
   private lastPointerClientX = 0;
   private lastPointerClientY = 0;
 
@@ -65,6 +66,7 @@ export class ImageResolver {
   }
 
   handlePointerMove(event: PointerEvent, overlayOpen: boolean): void {
+    this.hasPointerPosition = true;
     this.lastPointerClientX = event.clientX;
     this.lastPointerClientY = event.clientY;
 
@@ -88,10 +90,39 @@ export class ImageResolver {
 
   resolveActivationCandidate(): HTMLImageElement | null {
     const candidate =
+      this.resolveHoveredImage() ??
       this.hoveredImage ??
-      this.resolveImageFromPoint(this.lastPointerClientX, this.lastPointerClientY);
+      (this.hasPointerPosition
+        ? this.resolveImageFromPoint(
+            this.lastPointerClientX,
+            this.lastPointerClientY,
+          )
+        : null);
 
     return candidate && this.isVisibleImage(candidate) ? candidate : null;
+  }
+
+  private resolveHoveredImage(): HTMLImageElement | null {
+    let hoveredElements: Element[] = [];
+
+    try {
+      hoveredElements = Array.from(this.documentRef.querySelectorAll(':hover'));
+    } catch {
+      return null;
+    }
+
+    for (let index = hoveredElements.length - 1; index >= 0; index -= 1) {
+      const image = this.extractImageFromTarget(
+        hoveredElements[index],
+        Number.NaN,
+        Number.NaN,
+      );
+      if (image) {
+        return image;
+      }
+    }
+
+    return null;
   }
 
   private resolveImageFromPoint(x: number, y: number): HTMLImageElement | null {
