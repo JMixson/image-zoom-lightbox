@@ -9,6 +9,8 @@
 .iz-overlay {
   position: fixed;
   inset: 0;
+  z-index: 2147483647;
+  isolation: isolate;
   font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
   --iz-button-bg: initial;
   --iz-button-text: initial;

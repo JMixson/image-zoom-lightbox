@@ -12,14 +12,20 @@ const DOUBLE_ACTIVATION_MS = 350;
 const ZOOM_STEP = 1.1;
 const MAX_ZOOM_MULTIPLIER = 8;
 const MAX_IMAGE_ALT_LENGTH = 300;
-const OVERLAY_Z_INDEX = 2147483000;
+const OVERLAY_Z_INDEX = 2147483647;
 const VIEWPORT_PADDING_X = 96;
 const VIEWPORT_PADDING_Y = 96;
 const SAFE_IMAGE_PROTOCOLS = ['http:', 'https:', 'blob:'];
 
+type OverlayUi = Awaited<ReturnType<typeof createShadowRootUi>>;
+type OverlayInfrastructure = {
+  overlayUi: OverlayUi;
+  overlayBuilder: OverlayBuilder;
+};
+
 export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
-  runAt: 'document_idle',
+  runAt: 'document_start',
   allFrames: false,
   cssInjectionMode: 'ui',
   async main(ctx) {
@@ -27,18 +33,60 @@ export default defineContentScript({
       return;
     }
 
-    const overlayUi = await createShadowRootUi(ctx, {
-      name: 'iz-lightbox-overlay',
-      position: 'modal',
-      zIndex: OVERLAY_Z_INDEX,
-      onMount: uiContainer => uiContainer,
-    });
-
     let overlayState: OverlayState | null = null;
+    let overlayUi: OverlayUi | null = null;
+    let overlayBuilder: OverlayBuilder | null = null;
+    let overlayInfrastructurePromise: Promise<OverlayInfrastructure> | null =
+      null;
+    let overlayOpening = false;
 
-    const overlayBuilder = new OverlayBuilder({
-      mountTarget: overlayUi.uiContainer,
-    });
+    const getOverlayInfrastructure = (): Promise<OverlayInfrastructure> => {
+      if (!overlayInfrastructurePromise) {
+        overlayInfrastructurePromise = createShadowRootUi(ctx, {
+          name: 'iz-lightbox-overlay',
+          anchor: document.documentElement,
+          position: 'modal',
+          zIndex: OVERLAY_Z_INDEX,
+          onMount: (uiContainer, shadow, shadowHost) => {
+            // Z-index hardening is applied at multiple layers so the overlay
+            // stays above aggressive page stacking contexts and extension UI.
+            shadowHost.style.position = 'fixed';
+            shadowHost.style.top = '0';
+            shadowHost.style.left = '0';
+            shadowHost.style.width = '0';
+            shadowHost.style.height = '0';
+            shadowHost.style.overflow = 'visible';
+            shadowHost.style.zIndex = String(OVERLAY_Z_INDEX);
+            shadowHost.style.isolation = 'isolate';
+
+            const shadowDocumentElement = shadow.querySelector('html');
+            if (shadowDocumentElement instanceof HTMLElement) {
+              shadowDocumentElement.style.zIndex = String(OVERLAY_Z_INDEX);
+            }
+
+            return uiContainer;
+          },
+        })
+          .then(createdOverlayUi => {
+            overlayUi = createdOverlayUi;
+            overlayBuilder = new OverlayBuilder({
+              mountTarget: createdOverlayUi.uiContainer,
+            });
+
+            return {
+              overlayUi: createdOverlayUi,
+              overlayBuilder,
+            };
+          })
+          .catch(error => {
+            overlayInfrastructurePromise = null;
+            throw error;
+          });
+      }
+
+      return overlayInfrastructurePromise;
+    };
+
     const imageResolver = new ImageResolver({
       maxImageAltLength: MAX_IMAGE_ALT_LENGTH,
       safeImageProtocols: SAFE_IMAGE_PROTOCOLS,
@@ -58,7 +106,7 @@ export default defineContentScript({
 
     settingsManager.setCallbacks({
       onThemeChange: settings => {
-        if (overlayState) {
+        if (overlayState && overlayBuilder) {
           overlayBuilder.applyTheme(overlayState, settings);
         }
       },
@@ -69,13 +117,25 @@ export default defineContentScript({
 
     function closeOverlay(): void {
       const state = overlayState;
-      if (!state || state.ui.closing) {
+      const currentOverlayUi = overlayUi;
+      const currentOverlayBuilder = overlayBuilder;
+
+      if (
+        !state ||
+        state.ui.closing ||
+        !currentOverlayUi ||
+        !currentOverlayBuilder
+      ) {
+        if (state && (!currentOverlayUi || !currentOverlayBuilder)) {
+          overlayState = null;
+        }
+
         return;
       }
 
       state.ui.closing = true;
-      void overlayBuilder.destroy(state).finally(() => {
-        overlayUi.remove();
+      void currentOverlayBuilder.destroy(state).finally(() => {
+        currentOverlayUi.remove();
         if (overlayState === state) {
           overlayState = null;
         }
@@ -91,7 +151,12 @@ export default defineContentScript({
       }
     }
 
-    function mountOverlay(state: OverlayState): void {
+    async function mountOverlay(state: OverlayState): Promise<void> {
+      const { overlayUi, overlayBuilder } = await getOverlayInfrastructure();
+      if (overlayState !== state || state.ui.closing) {
+        return;
+      }
+
       if (!overlayUi.shadowHost.isConnected) {
         overlayUi.mount();
       }
@@ -162,8 +227,12 @@ export default defineContentScript({
       zoomController.applyTransform(state);
     }
 
-    function openOverlayForImage(image: HTMLImageElement): void {
-      if (overlayState || !imageResolver.isVisibleImage(image)) {
+    async function openOverlayForImage(image: HTMLImageElement): Promise<void> {
+      if (
+        overlayState ||
+        overlayOpening ||
+        !imageResolver.isVisibleImage(image)
+      ) {
         return;
       }
 
@@ -172,16 +241,34 @@ export default defineContentScript({
         return;
       }
 
-      const state = overlayBuilder.createState({
-        imageSrc,
-        imageAlt: imageResolver.sanitizeImageAltText(image.alt),
-        themeSettings: settingsManager.getThemeSettings(),
-        hideControlsByDefault:
-          settingsManager.getShortcutSettings().hideControlsByDefault,
-      });
+      overlayOpening = true;
 
-      overlayState = state;
-      mountOverlay(state);
+      try {
+        const { overlayBuilder } = await getOverlayInfrastructure();
+        if (overlayState || !imageResolver.isVisibleImage(image)) {
+          return;
+        }
+
+        const state = overlayBuilder.createState({
+          imageSrc,
+          imageAlt: imageResolver.sanitizeImageAltText(image.alt),
+          themeSettings: settingsManager.getThemeSettings(),
+          hideControlsByDefault:
+            settingsManager.getShortcutSettings().hideControlsByDefault,
+        });
+
+        overlayState = state;
+
+        try {
+          await mountOverlay(state);
+        } catch {
+          if (overlayState === state) {
+            overlayState = null;
+          }
+        }
+      } finally {
+        overlayOpening = false;
+      }
     }
 
     function onGlobalPointerMove(event: PointerEvent): void {
@@ -199,6 +286,7 @@ export default defineContentScript({
 
       if (
         overlayState &&
+        overlayBuilder &&
         activationDetector.matchesToggleControls(event) &&
         !activationDetector.isEditableTarget(event.target)
       ) {
@@ -213,7 +301,7 @@ export default defineContentScript({
         return;
       }
 
-      if (overlayState || activationDetector.isEditableTarget(event.target)) {
+      if (overlayState) {
         return;
       }
 
@@ -223,14 +311,15 @@ export default defineContentScript({
 
       const candidate = imageResolver.resolveActivationCandidate();
       if (candidate) {
-        openOverlayForImage(candidate);
+        void openOverlayForImage(candidate);
       }
     }
 
-    ctx.addEventListener(document, 'pointermove', onGlobalPointerMove, {
+    ctx.addEventListener(window, 'pointermove', onGlobalPointerMove, {
       capture: true,
+      passive: true,
     });
-    ctx.addEventListener(document, 'keydown', onGlobalKeyDown, {
+    ctx.addEventListener(window, 'keydown', onGlobalKeyDown, {
       capture: true,
     });
 
@@ -239,6 +328,7 @@ export default defineContentScript({
     ctx.onInvalidated(closeOverlay);
     ctx.onInvalidated(stopWatchingSettings);
 
+    void getOverlayInfrastructure();
     void settingsManager.load();
   },
 });
