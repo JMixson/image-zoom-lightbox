@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useRef,
   useState,
   type CSSProperties,
   type SubmitEvent,
@@ -28,7 +27,7 @@ import {
   setStoredSetting,
   setStoredSettings,
 } from '@/utils/settingsStorage';
-import { applyThemeSettings } from '@/utils/theme';
+import { getThemeCssVariables } from '@/utils/theme';
 import { type ColorAlphaByKey, type ColorKey } from '@/types/colorTypes';
 import { type ColorFieldDefinition, type FormState } from '@/types/formTypes';
 
@@ -224,7 +223,6 @@ function ColorField({
 }
 
 function App() {
-  const previewRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<StatusState>({
     isError: false,
     message: '',
@@ -240,6 +238,7 @@ function App() {
   const previewSettings = parseSettings(
     formStateToRawSettings(formState, colorAlphaByKey),
   );
+  const previewStyle = getThemeCssVariables(previewSettings) as CSSProperties;
   const isFormDisabled = isLoading;
 
   useEffect(() => {
@@ -272,14 +271,6 @@ function App() {
       isActive = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!previewRef.current) {
-      return;
-    }
-
-    applyThemeSettings(previewRef.current, previewSettings);
-  }, [previewSettings]);
 
   function setStoredFieldValue(key: StoredSettingKey, value: unknown): void {
     if (COLOR_KEY_SET.has(key)) {
@@ -615,7 +606,7 @@ function App() {
       </form>
       <section className="panel preview-panel">
         <h2>Preview</h2>
-        <div ref={previewRef} className="preview">
+        <div className="preview" style={previewStyle}>
           <div className="preview-toolbar">
             <button className="preview-btn">-</button>
             <button className="preview-btn">+</button>
