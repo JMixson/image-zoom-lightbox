@@ -1,6 +1,6 @@
 import { type ExtensionSettings } from '@/utils/settings';
 
-import { type ColorKey } from './colorTypes';
+import { type ColorAlphaByKey, type ColorKey } from './colorTypes';
 
 export type FormState = {
   [K in ColorKey]: string;
@@ -11,8 +11,18 @@ export type FormState = {
   buttonDisabledOpacity: string;
 };
 
+export type OptionsFormState = {
+  colorAlphaByKey: ColorAlphaByKey;
+  fields: FormState;
+};
+
 export type ColorFieldDefinition = {
   ariaLabel: string;
   key: ColorKey;
   label: string;
 };
+
+export type FormFieldChangeHandler = <K extends keyof FormState>(
+  key: K,
+  value: FormState[K],
+) => void;
