@@ -421,6 +421,11 @@ body {
   transform: scale(0.94);
 }
 
+.preview-btn:disabled {
+  cursor: default;
+  opacity: var(--iz-button-disabled-opacity);
+}
+
 .preview-reset {
   width: auto;
   min-width: 52px;
