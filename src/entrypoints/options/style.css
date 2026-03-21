@@ -71,6 +71,67 @@ body {
   color: rgba(235, 236, 240, 0.96);
 }
 
+/* ── Collapsible sub-groups ── */
+.settings-details {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.settings-details[open] {
+  padding-bottom: 14px;
+}
+
+.settings-details[open] > .settings-summary {
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px 10px 0 0;
+}
+
+.settings-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(235, 236, 240, 0.72);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  transition: background 140ms ease;
+}
+
+.settings-summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-summary::before {
+  content: '▶';
+  font-size: 10px;
+  transition: transform 200ms ease;
+}
+
+.settings-details[open] > .settings-summary::before {
+  transform: rotate(90deg);
+}
+
+.settings-summary:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.settings-summary:focus-visible {
+  outline: 2px solid #7ec7ff;
+  outline-offset: -2px;
+}
+
+.settings-details > .field-grid {
+  padding: 0 14px;
+}
+
 .field-grid {
   display: grid;
   gap: 12px;
@@ -91,6 +152,11 @@ body {
 .field-control {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.color-field-stack {
+  display: grid;
   gap: 8px;
 }
 
@@ -269,6 +335,120 @@ body {
   font-size: 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color: rgba(235, 236, 240, 0.86);
+}
+
+/* ── Compact alpha row ── */
+.alpha-row {
+  --alpha-track-color: #000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.alpha-label {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: rgba(235, 236, 240, 0.72);
+}
+
+.alpha-value-input {
+  flex-shrink: 0;
+  width: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: rgba(235, 236, 240, 0.88);
+  background: rgba(255, 255, 255, 0.06);
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.alpha-value-input::-webkit-inner-spin-button,
+.alpha-value-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.alpha-value-input:focus-visible {
+  outline: 2px solid #7ec7ff;
+  outline-offset: 1px;
+}
+
+/* ── Custom range slider with transparency gradient track ── */
+.alpha-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  height: 14px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.alpha-slider:focus-visible {
+  outline: 2px solid #7ec7ff;
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+/* Checkerboard + color gradient track (WebKit / Blink) */
+.alpha-slider::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background:
+    linear-gradient(to right, transparent, var(--alpha-track-color)),
+    repeating-conic-gradient(
+        rgba(255, 255, 255, 0.16) 0% 25%,
+        rgba(255, 255, 255, 0.06) 0% 50%
+      )
+      0 0 / 8px 8px;
+  background-clip: padding-box;
+}
+
+/* Checkerboard + color gradient track (Firefox) */
+.alpha-slider::-moz-range-track {
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background:
+    linear-gradient(to right, transparent, var(--alpha-track-color)),
+    repeating-conic-gradient(
+        rgba(255, 255, 255, 0.16) 0% 25%,
+        rgba(255, 255, 255, 0.06) 0% 50%
+      )
+      0 0 / 8px 8px;
+  background-clip: padding-box;
+}
+
+/* Thumb (WebKit / Blink) */
+.alpha-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -4px;
+  border-radius: 50%;
+  border: 2px solid #f7fbff;
+  background: var(--alpha-track-color);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Thumb (Firefox) */
+.alpha-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #f7fbff;
+  background: var(--alpha-track-color);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .field-reset {

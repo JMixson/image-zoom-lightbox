@@ -9,7 +9,7 @@ const SUCCESS_STATUS_COLOR = 'rgba(183, 255, 196, 0.95)';
 
 function App() {
   const {
-    colorAlphaByKey,
+    colorFields,
     formState,
     handleResetDefaults,
     handleResetField,
@@ -17,6 +17,7 @@ function App() {
     isFormDisabled,
     previewStyle,
     status,
+    updateColorField,
     updateField,
   } = useSettings();
 
@@ -37,17 +38,17 @@ function App() {
           onReset={handleResetField}
         />
         <ToolbarColorSection
-          colorAlphaByKey={colorAlphaByKey}
+          colorFields={colorFields}
           disabled={isFormDisabled}
           formState={formState}
-          onFieldChange={updateField}
+          onColorChange={updateColorField}
           onReset={handleResetField}
+          onFieldChange={updateField}
         />
         <CloseButtonSection
-          colorAlphaByKey={colorAlphaByKey}
+          colorFields={colorFields}
           disabled={isFormDisabled}
-          formState={formState}
-          onFieldChange={updateField}
+          onColorChange={updateColorField}
           onReset={handleResetField}
         />
         <div className="actions">
