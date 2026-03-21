@@ -37,13 +37,15 @@ function applyColorFieldToFormState(
 
   return {
     ...state,
-    colorAlphaByKey: {
-      ...state.colorAlphaByKey,
-      [key]: parsed?.a ?? 1,
+    colors: {
+      ...state.colors,
+      [key]: {
+        alpha: parsed?.a ?? 1,
+        hex: parsed ? rgbToHex(parsed.r, parsed.g, parsed.b) : '#000000',
+      },
     },
     fields: {
       ...state.fields,
-      [key]: parsed ? rgbToHex(parsed.r, parsed.g, parsed.b) : '#000000',
     },
   };
 }
@@ -61,22 +63,6 @@ const NON_COLOR_FIELD_APPLIERS = {
         ...state.fields,
         activationShortcut:
           patch.activationShortcut ?? state.fields.activationShortcut,
-      },
-    };
-  },
-  buttonDisabledOpacity: (
-    state: OptionsFormState,
-    value: unknown,
-  ): OptionsFormState => {
-    const patch = parseThemeSettingsPatch({ buttonDisabledOpacity: value });
-
-    return {
-      ...state,
-      fields: {
-        ...state.fields,
-        buttonDisabledOpacity: String(
-          patch.buttonDisabledOpacity ?? state.fields.buttonDisabledOpacity,
-        ),
       },
     };
   },
@@ -110,38 +96,39 @@ const NON_COLOR_FIELD_APPLIERS = {
     };
   },
 } satisfies Record<
-  Exclude<StoredSettingKey, ColorKey>,
+  Exclude<StoredSettingKey, ColorKey | 'buttonDisabledOpacity'>,
   (state: OptionsFormState, value: unknown) => OptionsFormState
 >;
 
 export function settingsToFormState(
   settings: ExtensionSettings,
 ): OptionsFormState {
-  const colorAlphaByKey = {} as OptionsFormState['colorAlphaByKey'];
-  const colorFields = {} as Record<ColorKey, string>;
+  const colorFields = {} as OptionsFormState['colors'];
 
   for (const key of COLOR_KEYS) {
     const parsed =
       parseCssColor(settings[key]) ?? parseCssColor(DEFAULT_THEME_SETTINGS[key]);
 
     if (!parsed) {
-      colorFields[key] = '#000000';
-      colorAlphaByKey[key] = 1;
+      colorFields[key] = {
+        alpha: 1,
+        hex: '#000000',
+      };
       continue;
     }
 
-    colorFields[key] = rgbToHex(parsed.r, parsed.g, parsed.b);
-    colorAlphaByKey[key] = parsed.a;
+    colorFields[key] = {
+      alpha: parsed.a,
+      hex: rgbToHex(parsed.r, parsed.g, parsed.b),
+    };
   }
 
   return {
-    colorAlphaByKey,
+    colors: colorFields,
     fields: {
-      ...colorFields,
       activationShortcut: settings.activationShortcut,
       hideControlsByDefault: settings.hideControlsByDefault,
       toggleControlsKey: settings.toggleControlsKey,
-      buttonDisabledOpacity: String(settings.buttonDisabledOpacity),
     },
   };
 }
@@ -153,19 +140,14 @@ export function formStateToRawSettings(
     activationShortcut: state.fields.activationShortcut,
     hideControlsByDefault: state.fields.hideControlsByDefault,
     toggleControlsKey: state.fields.toggleControlsKey,
-    buttonDisabledOpacity: state.fields.buttonDisabledOpacity,
   };
 
   for (const key of COLOR_KEYS) {
-    const rgb = parseHexColor(state.fields[key]);
+    const color = state.colors[key];
+    const rgb = parseHexColor(color.hex);
 
     rawSettings[key] = rgb
-      ? formatRgba(
-          rgb.r,
-          rgb.g,
-          rgb.b,
-          state.colorAlphaByKey[key] ?? 1,
-        )
+      ? formatRgba(rgb.r, rgb.g, rgb.b, color.alpha)
       : DEFAULT_THEME_SETTINGS[key];
   }
 
@@ -179,6 +161,10 @@ export function applyStoredSettingToFormState(
 ): OptionsFormState {
   if (isColorKey(key)) {
     return applyColorFieldToFormState(state, key, value);
+  }
+
+  if (key === 'buttonDisabledOpacity') {
+    return state;
   }
 
   return NON_COLOR_FIELD_APPLIERS[key](state, value);

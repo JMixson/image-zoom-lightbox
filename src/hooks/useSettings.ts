@@ -17,6 +17,7 @@ import {
   setStoredSetting,
   setStoredSettings,
 } from '@/utils/settingsStorage';
+import { type ColorFormState } from '@/types/colorTypes';
 import { getThemeCssVariables } from '@/utils/theme';
 import { type FormState } from '@/types/formTypes';
 
@@ -57,7 +58,7 @@ export function useSettings() {
     formStateToRawSettings(optionsFormState),
   );
   const previewStyle = getThemeCssVariables(previewSettings) as CSSProperties;
-  const { colorAlphaByKey, fields: formState } = optionsFormState;
+  const { colors: colorFields, fields: formState } = optionsFormState;
 
   useEffect(() => {
     let isActive = true;
@@ -122,6 +123,19 @@ export function useSettings() {
     });
   }
 
+  function updateColorField<K extends keyof ColorFormState>(
+    key: K,
+    value: ColorFormState[K],
+  ): void {
+    setOptionsFormState(previous => ({
+      ...previous,
+      colors: {
+        ...previous.colors,
+        [key]: value,
+      },
+    }));
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -169,13 +183,14 @@ export function useSettings() {
   }
 
   return {
-    colorAlphaByKey,
+    colorFields,
     formState,
     handleResetDefaults,
     handleResetField,
     handleSubmit,
     isFormDisabled: isLoading,
     previewStyle,
+    updateColorField,
     updateField,
     status,
   };
