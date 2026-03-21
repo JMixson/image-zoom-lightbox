@@ -6,7 +6,6 @@ export type FormState = {
   activationShortcut: ExtensionSettings['activationShortcut'];
   hideControlsByDefault: boolean;
   toggleControlsKey: string;
-  buttonDisabledOpacity: string;
 };
 
 export type OptionsFormState = {

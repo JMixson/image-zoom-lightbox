@@ -40,10 +40,8 @@ function App() {
         <ToolbarColorSection
           colorFields={colorFields}
           disabled={isFormDisabled}
-          formState={formState}
           onColorChange={updateColorField}
           onReset={handleResetField}
-          onFieldChange={updateField}
         />
         <CloseButtonSection
           colorFields={colorFields}

@@ -66,22 +66,6 @@ const NON_COLOR_FIELD_APPLIERS = {
       },
     };
   },
-  buttonDisabledOpacity: (
-    state: OptionsFormState,
-    value: unknown,
-  ): OptionsFormState => {
-    const patch = parseThemeSettingsPatch({ buttonDisabledOpacity: value });
-
-    return {
-      ...state,
-      fields: {
-        ...state.fields,
-        buttonDisabledOpacity: String(
-          patch.buttonDisabledOpacity ?? state.fields.buttonDisabledOpacity,
-        ),
-      },
-    };
-  },
   hideControlsByDefault: (
     state: OptionsFormState,
     value: unknown,
@@ -112,7 +96,7 @@ const NON_COLOR_FIELD_APPLIERS = {
     };
   },
 } satisfies Record<
-  Exclude<StoredSettingKey, ColorKey>,
+  Exclude<StoredSettingKey, ColorKey | 'buttonDisabledOpacity'>,
   (state: OptionsFormState, value: unknown) => OptionsFormState
 >;
 
@@ -145,7 +129,6 @@ export function settingsToFormState(
       activationShortcut: settings.activationShortcut,
       hideControlsByDefault: settings.hideControlsByDefault,
       toggleControlsKey: settings.toggleControlsKey,
-      buttonDisabledOpacity: String(settings.buttonDisabledOpacity),
     },
   };
 }
@@ -157,7 +140,6 @@ export function formStateToRawSettings(
     activationShortcut: state.fields.activationShortcut,
     hideControlsByDefault: state.fields.hideControlsByDefault,
     toggleControlsKey: state.fields.toggleControlsKey,
-    buttonDisabledOpacity: state.fields.buttonDisabledOpacity,
   };
 
   for (const key of COLOR_KEYS) {
@@ -179,6 +161,10 @@ export function applyStoredSettingToFormState(
 ): OptionsFormState {
   if (isColorKey(key)) {
     return applyColorFieldToFormState(state, key, value);
+  }
+
+  if (key === 'buttonDisabledOpacity') {
+    return state;
   }
 
   return NON_COLOR_FIELD_APPLIERS[key](state, value);

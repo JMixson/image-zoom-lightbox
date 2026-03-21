@@ -2,8 +2,6 @@ import { type StoredSettingKey } from '@/utils/settings';
 import {
   type ColorFieldChangeHandler,
   type ColorFieldDefinition,
-  type FormFieldChangeHandler,
-  type FormState,
 } from '@/types/formTypes';
 import { type ColorFormState } from '@/types/colorTypes';
 
@@ -50,18 +48,14 @@ type ButtonColorKey = (typeof BUTTON_COLOR_FIELDS)[number]['key'];
 type ToolbarColorSectionProps = {
   colorFields: Pick<ColorFormState, ButtonColorKey>;
   disabled: boolean;
-  formState: Pick<FormState, 'buttonDisabledOpacity'>;
   onColorChange: ColorFieldChangeHandler;
-  onFieldChange: FormFieldChangeHandler;
   onReset: (key: StoredSettingKey) => void;
 };
 
 function ToolbarColorSection({
   colorFields,
   disabled,
-  formState,
   onColorChange,
-  onFieldChange,
   onReset,
 }: ToolbarColorSectionProps) {
   return (
@@ -103,35 +97,6 @@ function ToolbarColorSection({
               value={colorFields[field.key]}
             />
           ))}
-          <div className="field">
-            <label htmlFor="buttonDisabledOpacity">
-              Disabled opacity (0 - 1)
-            </label>
-            <div className="field-control">
-              <input
-                id="buttonDisabledOpacity"
-                className="numeric-input"
-                type="number"
-                name="buttonDisabledOpacity"
-                min={0}
-                max={1}
-                step="0.01"
-                disabled={disabled}
-                onChange={event =>
-                  onFieldChange('buttonDisabledOpacity', event.target.value)
-                }
-                value={formState.buttonDisabledOpacity}
-              />
-              <button
-                type="button"
-                className="field-reset"
-                disabled={disabled}
-                onClick={() => onReset('buttonDisabledOpacity')}
-              >
-                Reset
-              </button>
-            </div>
-          </div>
         </div>
       </details>
     </section>
