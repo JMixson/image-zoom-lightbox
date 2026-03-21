@@ -37,13 +37,15 @@ function applyColorFieldToFormState(
 
   return {
     ...state,
-    colorAlphaByKey: {
-      ...state.colorAlphaByKey,
-      [key]: parsed?.a ?? 1,
+    colors: {
+      ...state.colors,
+      [key]: {
+        alpha: parsed?.a ?? 1,
+        hex: parsed ? rgbToHex(parsed.r, parsed.g, parsed.b) : '#000000',
+      },
     },
     fields: {
       ...state.fields,
-      [key]: parsed ? rgbToHex(parsed.r, parsed.g, parsed.b) : '#000000',
     },
   };
 }
@@ -117,27 +119,29 @@ const NON_COLOR_FIELD_APPLIERS = {
 export function settingsToFormState(
   settings: ExtensionSettings,
 ): OptionsFormState {
-  const colorAlphaByKey = {} as OptionsFormState['colorAlphaByKey'];
-  const colorFields = {} as Record<ColorKey, string>;
+  const colorFields = {} as OptionsFormState['colors'];
 
   for (const key of COLOR_KEYS) {
     const parsed =
       parseCssColor(settings[key]) ?? parseCssColor(DEFAULT_THEME_SETTINGS[key]);
 
     if (!parsed) {
-      colorFields[key] = '#000000';
-      colorAlphaByKey[key] = 1;
+      colorFields[key] = {
+        alpha: 1,
+        hex: '#000000',
+      };
       continue;
     }
 
-    colorFields[key] = rgbToHex(parsed.r, parsed.g, parsed.b);
-    colorAlphaByKey[key] = parsed.a;
+    colorFields[key] = {
+      alpha: parsed.a,
+      hex: rgbToHex(parsed.r, parsed.g, parsed.b),
+    };
   }
 
   return {
-    colorAlphaByKey,
+    colors: colorFields,
     fields: {
-      ...colorFields,
       activationShortcut: settings.activationShortcut,
       hideControlsByDefault: settings.hideControlsByDefault,
       toggleControlsKey: settings.toggleControlsKey,
@@ -157,15 +161,11 @@ export function formStateToRawSettings(
   };
 
   for (const key of COLOR_KEYS) {
-    const rgb = parseHexColor(state.fields[key]);
+    const color = state.colors[key];
+    const rgb = parseHexColor(color.hex);
 
     rawSettings[key] = rgb
-      ? formatRgba(
-          rgb.r,
-          rgb.g,
-          rgb.b,
-          state.colorAlphaByKey[key] ?? 1,
-        )
+      ? formatRgba(rgb.r, rgb.g, rgb.b, color.alpha)
       : DEFAULT_THEME_SETTINGS[key];
   }
 
