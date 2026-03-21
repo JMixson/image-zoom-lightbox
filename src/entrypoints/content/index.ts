@@ -134,6 +134,7 @@ export default defineContentScript({
       }
 
       state.ui.closing = true;
+      zoomController.cancelScheduledTransform(state);
       void currentOverlayBuilder.destroy(state).finally(() => {
         currentOverlayUi.remove();
         if (overlayState === state) {

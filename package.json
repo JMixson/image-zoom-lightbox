@@ -3,7 +3,7 @@
   "description": "Open an Edge-like image zoom lightbox with a configurable double-press shortcut while hovering an image.",
   "private": true,
   "license": "MIT",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "type": "module",
   "scripts": {
     "dev": "wxt",
