@@ -27,7 +27,7 @@ export class DragController {
     }
 
     event.preventDefault();
-    this.zoomController.applyTransform(state);
+    this.zoomController.applyTransform(state, { clampTranslation: true });
   }
 
   handlePointerMove(state: OverlayState, event: PointerEvent): void {
@@ -45,7 +45,7 @@ export class DragController {
     state.pan.translateX = state.drag.startTranslateX + dx;
     state.pan.translateY = state.drag.startTranslateY + dy;
 
-    this.zoomController.applyTransform(state, { clampTranslation: true });
+    this.zoomController.scheduleTransform(state, { clampTranslation: true });
     event.preventDefault();
   }
 
@@ -70,6 +70,6 @@ export class DragController {
       }
     }
 
-    this.zoomController.applyTransform(state);
+    this.zoomController.applyTransform(state, { clampTranslation: true });
   }
 }

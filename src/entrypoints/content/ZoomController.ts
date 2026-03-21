@@ -13,6 +13,11 @@ type ZoomControllerOptions = {
   windowRef?: Window;
 };
 
+type ScheduledTransform = {
+  frameId: number;
+  clampTranslation: boolean;
+};
+
 export class ZoomController {
   readonly zoomStep: number;
 
@@ -20,6 +25,10 @@ export class ZoomController {
   private readonly viewportPaddingX: number;
   private readonly viewportPaddingY: number;
   private readonly windowRef: Window;
+  private readonly scheduledTransforms = new WeakMap<
+    OverlayState,
+    ScheduledTransform
+  >();
 
   constructor(options: ZoomControllerOptions = {}) {
     this.zoomStep = options.zoomStep ?? 1.1;
@@ -98,7 +107,7 @@ export class ZoomController {
     state.pan.translateY = dy - (dy - state.pan.translateY) * ratio;
     state.zoom.scale = nextScale;
 
-    this.applyTransform(state, { clampTranslation: true });
+    this.scheduleTransform(state, { clampTranslation: true });
   }
 
   resetView(state: OverlayState): void {
@@ -110,6 +119,55 @@ export class ZoomController {
   }
 
   applyTransform(
+    state: OverlayState,
+    options: { clampTranslation?: boolean } = {},
+  ): void {
+    this.cancelScheduledTransform(state);
+    this.commitTransform(state, options);
+  }
+
+  scheduleTransform(
+    state: OverlayState,
+    options: { clampTranslation?: boolean } = {},
+  ): void {
+    const scheduledTransform = this.scheduledTransforms.get(state);
+    if (scheduledTransform) {
+      scheduledTransform.clampTranslation =
+        scheduledTransform.clampTranslation || !!options.clampTranslation;
+      return;
+    }
+
+    const nextTransform: ScheduledTransform = {
+      frameId: 0,
+      clampTranslation: !!options.clampTranslation,
+    };
+
+    nextTransform.frameId = this.windowRef.requestAnimationFrame(() => {
+      this.scheduledTransforms.delete(state);
+
+      if (state.ui.closing || !state.elements.overlay.isConnected) {
+        return;
+      }
+
+      this.commitTransform(state, {
+        clampTranslation: nextTransform.clampTranslation,
+      });
+    });
+
+    this.scheduledTransforms.set(state, nextTransform);
+  }
+
+  cancelScheduledTransform(state: OverlayState): void {
+    const scheduledTransform = this.scheduledTransforms.get(state);
+    if (!scheduledTransform) {
+      return;
+    }
+
+    this.windowRef.cancelAnimationFrame(scheduledTransform.frameId);
+    this.scheduledTransforms.delete(state);
+  }
+
+  private commitTransform(
     state: OverlayState,
     options: { clampTranslation?: boolean } = {},
   ): void {
