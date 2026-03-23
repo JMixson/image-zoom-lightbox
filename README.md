@@ -44,8 +44,10 @@ A browser extension that opens an Edge-style image lightbox when you use a confi
 ## Tech Stack
 
 - [WXT](https://wxt.dev/) for extension development and cross-browser builds
-- React for the popup and options pages
-- TypeScript throughout the project
+- React 19 for the popup and options pages
+- TypeScript 5 throughout the project
+- Vitest with `jsdom` and the WXT Vitest plugin for unit testing
+- pnpm for package management and scripts
 - Manifest V3 configuration managed in `wxt.config.ts`
 
 ## Development
@@ -96,6 +98,28 @@ pnpm zip:firefox
 ```
 
 WXT writes generated extension artifacts to `.output/`.
+
+## Testing
+
+Run the full unit test suite:
+
+```bash
+pnpm test
+```
+
+Run tests in watch mode during development:
+
+```bash
+pnpm test:watch
+```
+
+Generate a coverage report:
+
+```bash
+pnpm test:coverage
+```
+
+The test suite uses Vitest with `jsdom`, WXT's test plugin, and shared setup in `src/test/`.
 
 ## Loading the Extension Locally
 
@@ -172,11 +196,16 @@ Microsoft Edge includes a built-in **Magnify image** feature that can also use `
 |   |   |-- content/
 |   |   |   |-- index.ts              # content script orchestration
 |   |   |   |-- ActivationDetector.ts # double-press activation and shortcut matching
+|   |   |   |-- ActivationDetector.test.ts
 |   |   |   |-- ImageResolver.ts      # hovered image lookup and source validation
+|   |   |   |-- ImageResolver.test.ts
 |   |   |   |-- SettingsManager.ts    # stored settings loading and watchers
+|   |   |   |-- SettingsManager.test.ts
 |   |   |   |-- OverlayBuilder.ts     # overlay DOM creation, theming, and teardown
 |   |   |   |-- ZoomController.ts     # fit, zoom, pan limits, and button states
+|   |   |   |-- ZoomController.test.ts
 |   |   |   |-- DragController.ts     # pointer-driven panning behavior
+|   |   |   |-- DragController.test.ts
 |   |   |   `-- style.css             # lightbox styles
 |   |   |-- options/                  # React settings page
 |   |   |   |-- App.tsx
@@ -190,18 +219,25 @@ Microsoft Edge includes a built-in **Magnify image** feature that can also use `
 |   |       `-- style.css
 |   |-- hooks/
 |   |   `-- useSettings.ts            # shared settings loader for React entrypoints
+|   |-- test/
+|   |   |-- createOverlayState.ts     # shared overlay test state factory
+|   |   `-- setup.ts                  # shared Vitest/jsdom setup
 |   |-- types/
 |   |   |-- overlayTypes.ts           # shared overlay state and event types
 |   |   |-- formTypes.ts              # options form value types
 |   |   `-- colorTypes.ts             # color-related shared types
 |   `-- utils/
+|       |-- colors.test.ts
 |       |-- settingsStorage.ts        # WXT storage access and watchers
 |       |-- settings.ts               # defaults, parsing, and validation
+|       |-- settings.test.ts
 |       |-- shortcuts.ts              # shortcut constants and normalization
+|       |-- shortcuts.test.ts
 |       |-- theme.ts                  # CSS variable application for the overlay
 |       |-- colors.ts                 # CSS color validation helpers
 |       |-- formConversions.ts        # options form <-> stored settings mapping
 |       `-- math.ts                   # shared numeric helpers like clamp
+|-- vitest.config.ts                  # Vitest + WXT unit test configuration
 |-- wxt.config.ts                     # WXT config and shared manifest metadata
 `-- package.json                      # scripts, dependencies, and extension version
 ```
