@@ -10,7 +10,7 @@ export class ActivationDetector {
   private readonly doubleActivationMs: number;
   private readonly performanceRef: Performance;
 
-  private lastActivationTs = 0;
+  private lastActivationTs: number | null = null;
   private shortcutSettings: ShortcutSettings;
 
   constructor(
@@ -26,7 +26,7 @@ export class ActivationDetector {
     if (
       this.shortcutSettings.activationShortcut !== settings.activationShortcut
     ) {
-      this.lastActivationTs = 0;
+      this.lastActivationTs = null;
     }
 
     this.shortcutSettings = settings;
@@ -41,7 +41,7 @@ export class ActivationDetector {
       target instanceof HTMLInputElement ||
       target instanceof HTMLTextAreaElement ||
       target instanceof HTMLSelectElement ||
-      (target instanceof HTMLElement && target.isContentEditable)
+      !!(target instanceof HTMLElement && target.isContentEditable)
     );
   }
 
@@ -60,7 +60,8 @@ export class ActivationDetector {
     }
 
     const now = this.performanceRef.now();
-    const delta = now - this.lastActivationTs;
+    const delta =
+      this.lastActivationTs === null ? Number.POSITIVE_INFINITY : now - this.lastActivationTs;
     this.lastActivationTs = now;
 
     return delta <= this.doubleActivationMs;
