@@ -209,12 +209,7 @@ export class ImageResolver {
       return null;
     }
 
-    if (target instanceof HTMLImageElement) {
-      return target;
-    }
-
-    const closestImage = target.closest('img');
-    return closestImage instanceof HTMLImageElement ? closestImage : null;
+    return target instanceof HTMLImageElement ? target : null;
   }
 
   private resolveTrackedHoveredImage(): HTMLImageElement | null {
