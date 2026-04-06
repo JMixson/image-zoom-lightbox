@@ -1,9 +1,9 @@
 {
   "name": "image-zoom-lightbox",
-  "description": "Open an Edge-like image zoom lightbox with a configurable double-press shortcut while hovering an image.",
+  "description": "Open an image zoom lightbox with a configurable double-press shortcut while hovering an image.",
   "private": true,
   "license": "MIT",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "type": "module",
   "scripts": {
     "dev": "wxt",
