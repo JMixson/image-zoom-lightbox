@@ -89,15 +89,20 @@ export class ImageResolver {
   }
 
   resolveActivationCandidate(): HTMLImageElement | null {
+    const hoveredImage = this.resolveHoveredImage();
+    if (hoveredImage && this.isVisibleImage(hoveredImage)) {
+      return hoveredImage;
+    }
+
+    if (!this.hasPointerPosition) {
+      return null;
+    }
+
     const candidate =
-      this.resolveHoveredImage() ??
-      this.hoveredImage ??
-      (this.hasPointerPosition
-        ? this.resolveImageFromPoint(
-            this.lastPointerClientX,
-            this.lastPointerClientY,
-          )
-        : null);
+      this.resolveImageFromPoint(
+        this.lastPointerClientX,
+        this.lastPointerClientY,
+      ) ?? this.resolveTrackedHoveredImage();
 
     return candidate && this.isVisibleImage(candidate) ? candidate : null;
   }
@@ -112,11 +117,7 @@ export class ImageResolver {
     }
 
     for (let index = hoveredElements.length - 1; index >= 0; index -= 1) {
-      const image = this.extractImageFromTarget(
-        hoveredElements[index],
-        Number.NaN,
-        Number.NaN,
-      );
+      const image = this.extractDirectImageFromTarget(hoveredElements[index]);
       if (image) {
         return image;
       }
@@ -146,17 +147,13 @@ export class ImageResolver {
     x: number,
     y: number,
   ): HTMLImageElement | null {
+    const directImage = this.extractDirectImageFromTarget(target);
+    if (directImage) {
+      return directImage;
+    }
+
     if (!(target instanceof Element)) {
       return null;
-    }
-
-    if (target instanceof HTMLImageElement) {
-      return target;
-    }
-
-    const closestImage = target.closest('img');
-    if (closestImage instanceof HTMLImageElement) {
-      return closestImage;
     }
 
     let current: Element | null = target;
@@ -178,17 +175,12 @@ export class ImageResolver {
     y: number,
   ): HTMLImageElement | null {
     const hasPoint = Number.isFinite(x) && Number.isFinite(y);
-    let firstVisibleImage: HTMLImageElement | null = null;
     let bestPointMatch: HTMLImageElement | null = null;
     let bestPointMatchArea = Number.POSITIVE_INFINITY;
 
     for (const image of root.querySelectorAll('img')) {
       if (!this.isVisibleImage(image)) {
         continue;
-      }
-
-      if (!firstVisibleImage) {
-        firstVisibleImage = image;
       }
 
       if (!hasPoint) {
@@ -207,7 +199,38 @@ export class ImageResolver {
       }
     }
 
-    return bestPointMatch || firstVisibleImage;
+    return hasPoint ? bestPointMatch : null;
+  }
+
+  private extractDirectImageFromTarget(
+    target: EventTarget | null,
+  ): HTMLImageElement | null {
+    if (!(target instanceof Element)) {
+      return null;
+    }
+
+    if (target instanceof HTMLImageElement) {
+      return target;
+    }
+
+    const closestImage = target.closest('img');
+    return closestImage instanceof HTMLImageElement ? closestImage : null;
+  }
+
+  private resolveTrackedHoveredImage(): HTMLImageElement | null {
+    const trackedImage = this.hoveredImage;
+    if (
+      !trackedImage ||
+      !this.rectContainsPoint(
+        trackedImage.getBoundingClientRect(),
+        this.lastPointerClientX,
+        this.lastPointerClientY,
+      )
+    ) {
+      return null;
+    }
+
+    return trackedImage;
   }
 
   private rectContainsPoint(rect: DOMRect, x: number, y: number): boolean {
