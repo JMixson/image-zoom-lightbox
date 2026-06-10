@@ -8,6 +8,8 @@ A browser extension that opens an image lightbox when you use a configurable dou
 
 Hover over an image and press your chosen shortcut twice to open a clean lightbox with quick zoom and pan controls. Customize the shortcut, control visibility, and overlay colors in Settings, and keep your preferences saved for future sessions.
 
+> **A note on AI:** Image Zoom Lightbox is developed by a human with AI assistance (mostly Codex) helping write, refactor, and review code. Every change is reviewed, tested, and shipped intentionally.
+
 [![Available in the Chrome Web Store](https://user-images.githubusercontent.com/22908993/166417152-f870bfbd-1770-4c28-b69d-a7303aebc9a6.png)](https://chromewebstore.google.com/detail/image-zoom-lightbox/hlhkddoebkcjafoajhecgdmcjpbghhpe) [![Get the add-on](https://user-images.githubusercontent.com/22908993/166417727-3481fef4-00e5-4cf0-bb03-27fb880d993c.png)](https://addons.mozilla.org/en-US/firefox/addon/image-zoom-lightbox/)
 
 ## Preview
