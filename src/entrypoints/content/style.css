@@ -93,6 +93,27 @@
   -webkit-user-drag: none;
 }
 
+.iz-status {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  margin: 0;
+  padding: 16px 24px;
+  max-width: calc(100% - 48px);
+  border-radius: 14px;
+  background: #1c1c22;
+  color: #fff;
+  text-align: center;
+  pointer-events: none;
+}
+
+.iz-overlay[data-image-status='loading'] .iz-shell,
+.iz-overlay[data-image-status='error'] .iz-shell {
+  visibility: hidden;
+}
+
 /* ── Toolbar ──────────────────────────────────────────── */
 .iz-toolbar {
   position: absolute;

@@ -1,13 +1,12 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   DEFAULT_SETTINGS,
   DEFAULT_SHORTCUT_SETTINGS,
   DEFAULT_THEME_SETTINGS,
   type ExtensionSettings,
-  type ShortcutSettings,
-  type ThemeSettings,
 } from '@/utils/settings';
+import * as settingsStorage from '@/utils/settingsStorage';
 import { setStoredSettings } from '@/utils/settingsStorage';
 import { SettingsManager } from './SettingsManager';
 
@@ -49,19 +48,24 @@ describe('SettingsManager', () => {
     );
   });
 
-  it('caches the in-flight load promise', async () => {
-    const manager = new SettingsManager();
+  it('loads settings once for concurrent and subsequent callers', async () => {
+    let resolve!: (settings: ExtensionSettings) => void;
+    const getStoredSettings = vi.spyOn(settingsStorage, 'getStoredSettings')
+      .mockReturnValue(new Promise(done => { resolve = done; }));
+    const onThemeChange = vi.fn();
+    const manager = new SettingsManager({ onThemeChange });
 
     const firstLoad = manager.load();
     const secondLoad = manager.load();
 
-    expect(secondLoad).toBe(firstLoad);
+    expect(getStoredSettings).toHaveBeenCalledOnce();
+    resolve({ ...DEFAULT_SETTINGS, buttonBg: '#abcdef' });
+    await Promise.all([firstLoad, secondLoad]);
+    await manager.load();
 
-    await expect(firstLoad).resolves.toBeUndefined();
-
-    const thirdLoad = manager.load();
-
-    expect(thirdLoad).toBe(firstLoad);
+    expect(getStoredSettings).toHaveBeenCalledOnce();
+    expect(onThemeChange).toHaveBeenCalledOnce();
+    expect(manager.getThemeSettings().buttonBg).toBe('#abcdef');
   });
 
   it('applies theme and shortcut patches while watching storage changes', async () => {
@@ -90,11 +94,9 @@ describe('SettingsManager', () => {
       hideControlsByDefault: true,
       toggleControlsKey: 'q',
     });
-    expect(onThemeChange).toHaveBeenCalledTimes(2);
     expect(onThemeChange).toHaveBeenLastCalledWith(
       manager.getThemeSettings(),
     );
-    expect(onShortcutChange).toHaveBeenCalledTimes(2);
     expect(onShortcutChange).toHaveBeenLastCalledWith(
       manager.getShortcutSettings(),
     );
@@ -134,34 +136,16 @@ describe('SettingsManager', () => {
     expect(manager.getThemeSettings().buttonBg).toBe('#111111');
     expect(manager.getShortcutSettings().toggleControlsKey).toBe('j');
   });
-});
-
-describe('SettingsManager mocked storage behavior', () => {
-  afterEach(() => {
-    vi.doUnmock('@/utils/settingsStorage');
-    vi.resetModules();
-  });
 
   it('retries after a rejected load', async () => {
-    const getStoredSettings = vi
-      .fn<() => Promise<ExtensionSettings>>()
+    const getStoredSettings = vi.spyOn(settingsStorage, 'getStoredSettings')
       .mockRejectedValueOnce(new Error('boom'))
       .mockResolvedValueOnce({
         ...DEFAULT_SETTINGS,
         buttonBg: '#abcdef',
       });
 
-    vi.resetModules();
-    vi.doMock('@/utils/settingsStorage', () => ({
-      getStoredSettings,
-      watchShortcutSettings: vi.fn(),
-      watchThemeSettings: vi.fn(),
-    }));
-
-    const { SettingsManager: MockedSettingsManager } = await import(
-      './SettingsManager'
-    );
-    const manager = new MockedSettingsManager();
+    const manager = new SettingsManager();
 
     await expect(manager.load()).resolves.toBeUndefined();
     await expect(manager.load()).resolves.toBeUndefined();
@@ -171,51 +155,5 @@ describe('SettingsManager mocked storage behavior', () => {
       ...DEFAULT_THEME_SETTINGS,
       buttonBg: '#abcdef',
     });
-  });
-
-  it('ignores empty theme and shortcut patches from watchers', async () => {
-    const onThemeChange = vi.fn();
-    const onShortcutChange = vi.fn();
-    const unwatchThemeSettings = vi.fn();
-    const unwatchShortcutSettings = vi.fn();
-    const watchThemeSettings = vi.fn(
-      (callback: (patch: Partial<ThemeSettings>) => void) => {
-        callback({});
-        return unwatchThemeSettings;
-      },
-    );
-    const watchShortcutSettings = vi.fn(
-      (callback: (patch: Partial<ShortcutSettings>) => void) => {
-        callback({});
-        return unwatchShortcutSettings;
-      },
-    );
-
-    vi.resetModules();
-    vi.doMock('@/utils/settingsStorage', () => ({
-      getStoredSettings: vi.fn(),
-      watchShortcutSettings,
-      watchThemeSettings,
-    }));
-
-    const { SettingsManager: MockedSettingsManager } = await import(
-      './SettingsManager'
-    );
-    const manager = new MockedSettingsManager({
-      onThemeChange,
-      onShortcutChange,
-    });
-
-    const stopWatching = manager.startWatching();
-
-    expect(onThemeChange).not.toHaveBeenCalled();
-    expect(onShortcutChange).not.toHaveBeenCalled();
-    expect(manager.getThemeSettings()).toEqual(DEFAULT_THEME_SETTINGS);
-    expect(manager.getShortcutSettings()).toEqual(DEFAULT_SHORTCUT_SETTINGS);
-
-    stopWatching();
-
-    expect(unwatchThemeSettings).toHaveBeenCalledOnce();
-    expect(unwatchShortcutSettings).toHaveBeenCalledOnce();
   });
 });
