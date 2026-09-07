@@ -12,17 +12,20 @@ describe('viewer geometry', () => {
     expect(viewportBounds({ width: 100, height: 100 }, { width: 96, height: 96 })).toEqual({ width: 120, height: 120 });
   });
 
-  it('preserves the image point beneath the anchor even when zoom hits its limit', () => {
+  it.each([
+    { factor: 10, scale: 4 },
+    { factor: 0.001, scale: 1 },
+  ])('preserves the anchor when zoom is clamped to $scale', ({ factor, scale }) => {
     const zoom = { scale: 2, fitScale: 1, minScale: 1, maxScale: 4 };
     const pan = { translateX: 30, translateY: -40 };
     const anchor = { x: 100, y: 50 };
-    const next = zoomAroundAnchor(zoom, pan, anchor, 10)!;
-    expect(next.scale).toBe(4);
+    const next = zoomAroundAnchor(zoom, pan, anchor, factor)!;
+    expect(next.scale).toBe(scale);
     expect((anchor.x - next.pan.translateX) / next.scale).toBe((anchor.x - pan.translateX) / zoom.scale);
     expect((anchor.y - next.pan.translateY) / next.scale).toBe((anchor.y - pan.translateY) / zoom.scale);
     expect(zoom.scale).toBe(2);
     expect(pan).toEqual({ translateX: 30, translateY: -40 });
-    expect(zoomAroundAnchor({ ...zoom, scale: 4 }, pan, anchor, 2)).toBeNull();
+    expect(zoomAroundAnchor({ ...zoom, scale }, pan, anchor, factor)).toBeNull();
   });
 
   it('centers axes smaller than the viewport and bounds the other axis', () => {

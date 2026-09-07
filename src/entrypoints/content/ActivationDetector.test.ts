@@ -48,7 +48,10 @@ describe('ActivationDetector', () => {
     expect(detector.shouldActivate(new KeyboardEvent('keydown', { key: 'Control' }))).toBe(false);
   });
 
-  it('requires two presses within the configured threshold', () => {
+  it.each([
+    { delay: 350, activates: true },
+    { delay: 351, activates: false },
+  ])('activates after $delay ms: $activates', ({ delay, activates }) => {
     const nowRef = { value: 100 };
     const detector = createDetector(nowRef);
 
@@ -56,15 +59,10 @@ describe('ActivationDetector', () => {
       detector.shouldActivate(new KeyboardEvent('keydown', { key: 'Control' })),
     ).toBe(false);
 
-    nowRef.value = 300;
+    nowRef.value += delay;
     expect(
       detector.shouldActivate(new KeyboardEvent('keydown', { key: 'Control' })),
-    ).toBe(true);
-
-    nowRef.value = 900;
-    expect(
-      detector.shouldActivate(new KeyboardEvent('keydown', { key: 'Control' })),
-    ).toBe(false);
+    ).toBe(activates);
   });
 
   it('resets when the activation shortcut changes', () => {
@@ -82,6 +80,9 @@ describe('ActivationDetector', () => {
     expect(
       detector.shouldActivate(new KeyboardEvent('keydown', { key: 'Shift' })),
     ).toBe(false);
+    expect(
+      detector.shouldActivate(new KeyboardEvent('keydown', { key: 'Shift' })),
+    ).toBe(true);
   });
 
   it('ignores repeated key events', () => {
@@ -103,26 +104,20 @@ describe('ActivationDetector', () => {
     ).toBe(false);
   });
 
-  it('rejects modifier combinations that should not count', () => {
-    const detector = createDetector({ value: 100 });
+  it.each(['metaKey', 'shiftKey', 'altKey'] as const)(
+    'resets a pending activation when Control is combined with %s',
+    modifier => {
+      const detector = createDetector({ value: 100 });
+      const press = (init: KeyboardEventInit = {}) => detector.shouldActivate(
+        new KeyboardEvent('keydown', { key: 'Control', ...init }),
+      );
 
-    expect(
-      detector.shouldActivate(
-        new KeyboardEvent('keydown', {
-          key: 'Control',
-          metaKey: true,
-        }),
-      ),
-    ).toBe(false);
-    expect(
-      detector.shouldActivate(
-        new KeyboardEvent('keydown', {
-          key: 'Control',
-          shiftKey: true,
-        }),
-      ),
-    ).toBe(false);
-  });
+      expect(press()).toBe(false);
+      expect(press({ [modifier]: true })).toBe(false);
+      expect(press()).toBe(false);
+      expect(press()).toBe(true);
+    },
+  );
 
   it('matches only the configured toggle-controls key', () => {
     const detector = createDetector({ value: 100 });
@@ -153,26 +148,5 @@ describe('ActivationDetector', () => {
         new KeyboardEvent('keydown', { key: 'x' }),
       ),
     ).toBe(false);
-  });
-
-  it('recognizes editable targets', () => {
-    const detector = createDetector({ value: 100 });
-    const input = document.createElement('input');
-    const textarea = document.createElement('textarea');
-    const select = document.createElement('select');
-    const contentEditable = document.createElement('div');
-    const plainDiv = document.createElement('div');
-
-    Object.defineProperty(contentEditable, 'isContentEditable', {
-      configurable: true,
-      value: true,
-    });
-
-    expect(detector.isEditableTarget(input)).toBe(true);
-    expect(detector.isEditableTarget(textarea)).toBe(true);
-    expect(detector.isEditableTarget(select)).toBe(true);
-    expect(detector.isEditableTarget(contentEditable)).toBe(true);
-    expect(detector.isEditableTarget(plainDiv)).toBe(false);
-    expect(detector.isEditableTarget(null)).toBe(false);
   });
 });

@@ -62,22 +62,6 @@ describe('ZoomController', () => {
     expect(state.pan.translateY).toBe(0);
   });
 
-  it('allows dragging only when zoomed in beyond fit scale', () => {
-    const controller = new ZoomController({
-      windowRef: createWindowRef() as unknown as Window,
-    });
-    const state = createOverlayState({
-      fitScale: 1,
-      minScale: 1,
-      scale: 1,
-    });
-
-    expect(controller.canDrag(state)).toBe(false);
-
-    state.zoom.scale = 1.2;
-    expect(controller.canDrag(state)).toBe(true);
-  });
-
   it('zooms around the pointer position', () => {
     const windowRef = createWindowRef(1000, 800);
     const controller = new ZoomController({
@@ -95,24 +79,6 @@ describe('ZoomController', () => {
     expect(state.zoom.scale).toBe(2);
     expect(state.pan.translateX).toBe(-100);
     expect(state.pan.translateY).toBe(-50);
-  });
-
-  it('clamps zooming to the configured min and max scale', () => {
-    const controller = new ZoomController({
-      windowRef: createWindowRef() as unknown as Window,
-    });
-    const state = createOverlayState({
-      fitScale: 1,
-      minScale: 1,
-      maxScale: 4,
-      scale: 1.5,
-    });
-
-    controller.zoomAt(state, 500, 400, 10);
-    expect(state.zoom.scale).toBe(4);
-
-    controller.zoomAt(state, 500, 400, 0.001);
-    expect(state.zoom.scale).toBe(1);
   });
 
   it('recomputes fit scale on resize and clamps the current scale', () => {

@@ -100,8 +100,12 @@ describe('content activation', () => {
     expect(ImageResolver.prototype.resolveActivationCandidate).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['input', 'textarea', 'select'])('does not activate from %s', tag => {
-    const editor = document.createElement(tag);
+  it.each(['input', 'textarea', 'select', 'contenteditable'])('does not activate from %s', tag => {
+    const editor = document.createElement(tag === 'contenteditable' ? 'div' : tag);
+    if (tag === 'contenteditable') {
+      // JSDOM does not calculate isContentEditable from the HTML attribute.
+      Object.defineProperty(editor, 'isContentEditable', { value: true });
+    }
     document.body.append(editor);
     press(editor);
     press(editor);
