@@ -12,6 +12,7 @@ export type OverlayElements = {
   zoomInButton: HTMLButtonElement;
   zoomOutButton: HTMLButtonElement;
   resetButton: HTMLButtonElement;
+  status: HTMLParagraphElement;
 };
 
 export type OverlayState = {

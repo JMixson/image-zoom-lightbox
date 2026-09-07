@@ -21,6 +21,9 @@ export class OverlayBuilder {
   private readonly documentRef: Document;
   private readonly windowRef: Window;
   private readonly closeTransitionMs: number;
+  private openingFrame: number | undefined;
+  private finishClose?: () => void;
+  private closePromise?: Promise<void>;
 
   constructor(options: OverlayBuilderOptions) {
     this.documentRef = options.documentRef ?? document;
@@ -34,6 +37,7 @@ export class OverlayBuilder {
     overlay.className = 'iz-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Image zoom');
     applyThemeSettings(overlay, options.themeSettings);
 
     const backdrop = this.documentRef.createElement('div');
@@ -53,35 +57,23 @@ export class OverlayBuilder {
     shell.appendChild(displayImage);
     stage.appendChild(shell);
 
-    const closeButton = this.documentRef.createElement('button');
-    closeButton.type = 'button';
-    closeButton.className = 'iz-btn iz-close';
-    closeButton.setAttribute('aria-label', 'Close image zoom');
-    closeButton.textContent = '\u00D7';
+    const closeButton = this.createButton('Close image zoom', '\u00D7', 'iz-close');
 
     const toolbar = this.documentRef.createElement('div');
     toolbar.className = 'iz-toolbar';
 
-    const zoomOutButton = this.documentRef.createElement('button');
-    zoomOutButton.type = 'button';
-    zoomOutButton.className = 'iz-btn';
-    zoomOutButton.setAttribute('aria-label', 'Zoom out');
-    zoomOutButton.textContent = '-';
+    const status = this.documentRef.createElement('p');
+    status.className = 'iz-status';
+    status.setAttribute('role', 'status');
+    status.textContent = 'Loading image…';
+    overlay.dataset.imageStatus = 'loading';
 
-    const zoomInButton = this.documentRef.createElement('button');
-    zoomInButton.type = 'button';
-    zoomInButton.className = 'iz-btn';
-    zoomInButton.setAttribute('aria-label', 'Zoom in');
-    zoomInButton.textContent = '+';
-
-    const resetButton = this.documentRef.createElement('button');
-    resetButton.type = 'button';
-    resetButton.className = 'iz-btn iz-reset';
-    resetButton.setAttribute('aria-label', 'Reset to fit');
-    resetButton.textContent = 'Fit';
+    const zoomOutButton = this.createButton('Zoom out', '-');
+    const zoomInButton = this.createButton('Zoom in', '+');
+    const resetButton = this.createButton('Reset to fit', 'Fit', 'iz-reset');
 
     toolbar.append(zoomOutButton, zoomInButton, resetButton);
-    overlay.append(backdrop, stage, closeButton, toolbar);
+    overlay.append(backdrop, stage, status, closeButton, toolbar);
 
     return {
       elements: {
@@ -95,6 +87,7 @@ export class OverlayBuilder {
         zoomInButton,
         zoomOutButton,
         resetButton,
+        status,
       },
       zoom: {
         scale: 1,
@@ -137,11 +130,20 @@ export class OverlayBuilder {
     this.applyControlsVisibility(state);
   }
 
+  setImageStatus(state: OverlayState, status: 'loaded' | 'error'): void {
+    state.elements.overlay.dataset.imageStatus = status;
+    state.elements.status.hidden = status === 'loaded';
+    state.elements.status.textContent = status === 'error'
+      ? 'This image could not be loaded. Press Escape or click outside to close.'
+      : '';
+  }
+
   mount(state: OverlayState, handlers: OverlayEventHandlers): void {
     this.mountTarget.appendChild(state.elements.overlay);
     this.applyControlsVisibility(state);
 
-    this.windowRef.requestAnimationFrame(() => {
+    this.openingFrame = this.windowRef.requestAnimationFrame(() => {
+      this.openingFrame = undefined;
       if (state.elements.overlay.isConnected && !state.ui.closing) {
         state.elements.overlay.classList.add('iz-open');
       }
@@ -242,8 +244,8 @@ export class OverlayBuilder {
   }
 
   destroy(state: OverlayState): Promise<void> {
-    state.ui.closing = true;
-    state.abortController.abort();
+    if (this.closePromise) return this.closePromise;
+    this.stopEvents(state);
 
     const { overlay, backdrop } = state.elements;
     if (!overlay.isConnected) {
@@ -257,15 +259,9 @@ export class OverlayBuilder {
 
     overlay.classList.remove('iz-open');
 
-    return new Promise(resolve => {
-      let settled = false;
-
+    this.closePromise = new Promise(resolve => {
       const cleanup = (): void => {
-        if (settled) {
-          return;
-        }
-
-        settled = true;
+        this.finishClose = undefined;
         backdrop.removeEventListener('transitionend', onTransitionEnd);
         this.windowRef.clearTimeout(timeoutId);
 
@@ -288,7 +284,25 @@ export class OverlayBuilder {
       );
 
       backdrop.addEventListener('transitionend', onTransitionEnd);
+      this.finishClose = cleanup;
     });
+    return this.closePromise;
+  }
+
+  dispose(state: OverlayState): void {
+    this.stopEvents(state);
+    this.finishClose?.();
+    state.elements.displayImage.removeAttribute('src');
+    state.elements.overlay.remove();
+  }
+
+  private stopEvents(state: OverlayState): void {
+    state.ui.closing = true;
+    state.abortController.abort();
+    if (this.openingFrame !== undefined) {
+      this.windowRef.cancelAnimationFrame(this.openingFrame);
+      this.openingFrame = undefined;
+    }
   }
 
   private applyControlsVisibility(state: OverlayState): void {
@@ -296,6 +310,15 @@ export class OverlayBuilder {
       'iz-controls-hidden',
       state.ui.controlsHidden,
     );
+  }
+
+  private createButton(label: string, text: string, className = ''): HTMLButtonElement {
+    const button = this.documentRef.createElement('button');
+    button.type = 'button';
+    button.className = `iz-btn ${className}`.trim();
+    button.setAttribute('aria-label', label);
+    button.textContent = text;
+    return button;
   }
 
   private prefersReducedMotion(): boolean {

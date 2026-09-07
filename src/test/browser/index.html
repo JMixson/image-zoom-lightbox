@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Image Zoom viewer fixtures</title>
+    <style>
+      body { font: 18px system-ui; margin: 40px; }
+      img { width: 320px; }
+      button, input { font: inherit; margin: 8px; }
+      /* Deliberately hostile page rules: the viewer must stay isolated. */
+      div { color: red !important; }
+      button { background: yellow !important; }
+    </style>
+  </head>
+  <body>
+    <h1>Viewer browser fixtures</h1>
+    <p>This harness runs the viewer inside a shadow root. Extension packaging and content activation need separate extension checks.</p>
+    <input aria-label="Page editor" placeholder="Page editor">
+    <p><img src="/images/default-lightbox.jpg" alt="Lightbox example"></p>
+    <button id="open">Open image</button>
+    <button id="error">Open broken image</button>
+    <button id="hidden">Open with hidden controls</button>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

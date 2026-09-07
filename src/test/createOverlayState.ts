@@ -1,4 +1,6 @@
+import { OverlayBuilder } from '@/entrypoints/content/OverlayBuilder';
 import type { OverlayState } from '@/types/overlayTypes';
+import { DEFAULT_THEME_SETTINGS } from '@/utils/settings';
 
 type CreateOverlayStateOptions = {
   naturalWidth?: number;
@@ -15,76 +17,32 @@ type CreateOverlayStateOptions = {
   dragActive?: boolean;
 };
 
-export function createOverlayState(
-  options: CreateOverlayStateOptions = {},
-): OverlayState {
-  const overlay = document.createElement('div');
-  const backdrop = document.createElement('div');
-  const stage = document.createElement('div');
-  const shell = document.createElement('div');
-  const displayImage = document.createElement('img');
-  const closeButton = document.createElement('button');
-  const toolbar = document.createElement('div');
-  const zoomInButton = document.createElement('button');
-  const zoomOutButton = document.createElement('button');
-  const resetButton = document.createElement('button');
-
-  shell.append(displayImage);
-  toolbar.append(zoomOutButton, resetButton, zoomInButton);
-  stage.append(shell);
-  overlay.append(backdrop, stage, closeButton, toolbar);
-  document.body.append(overlay);
-
-  Object.defineProperty(displayImage, 'naturalWidth', {
-    configurable: true,
-    value: options.naturalWidth ?? 1200,
+export function createOverlayState(options: CreateOverlayStateOptions = {}): OverlayState {
+  const state = new OverlayBuilder({ mountTarget: document.body }).createState({
+    imageSrc: 'https://example.com/image.jpg',
+    imageAlt: 'Example image',
+    themeSettings: DEFAULT_THEME_SETTINGS,
+    hideControlsByDefault: options.controlsHidden ?? false,
   });
-  Object.defineProperty(displayImage, 'naturalHeight', {
-    configurable: true,
-    value: options.naturalHeight ?? 800,
+  document.body.append(state.elements.overlay);
+  state.image.naturalWidth = options.naturalWidth ?? 1200;
+  state.image.naturalHeight = options.naturalHeight ?? 800;
+  Object.defineProperties(state.elements.displayImage, {
+    naturalWidth: { configurable: true, value: state.image.naturalWidth },
+    naturalHeight: { configurable: true, value: state.image.naturalHeight },
   });
-
-  return {
-    elements: {
-      overlay: overlay as HTMLDivElement,
-      backdrop: backdrop as HTMLDivElement,
-      stage: stage as HTMLDivElement,
-      shell: shell as HTMLDivElement,
-      displayImage,
-      closeButton,
-      toolbar: toolbar as HTMLDivElement,
-      zoomInButton,
-      zoomOutButton,
-      resetButton,
-    },
-    zoom: {
-      scale: options.scale ?? 1,
-      fitScale: options.fitScale ?? 1,
-      minScale: options.minScale ?? 1,
-      maxScale: options.maxScale ?? 8,
-    },
-    pan: {
-      translateX: options.translateX ?? 0,
-      translateY: options.translateY ?? 0,
-    },
-    drag: {
-      active: options.dragActive ?? false,
-      startX: 0,
-      startY: 0,
-      startTranslateX: 0,
-      startTranslateY: 0,
-    },
-    image: {
-      src: 'https://example.com/image.jpg',
-      alt: 'Example image',
-      naturalWidth: options.naturalWidth ?? 1200,
-      naturalHeight: options.naturalHeight ?? 800,
-    },
-    ui: {
-      controlsHidden: options.controlsHidden ?? false,
-      suppressBackdropClick: options.suppressBackdropClick ?? false,
-      closing: options.closing ?? false,
-    },
-    abortController: new AbortController(),
+  state.zoom = {
+    scale: options.scale ?? 1,
+    fitScale: options.fitScale ?? 1,
+    minScale: options.minScale ?? 1,
+    maxScale: options.maxScale ?? 8,
   };
+  state.pan = {
+    translateX: options.translateX ?? 0,
+    translateY: options.translateY ?? 0,
+  };
+  state.drag.active = options.dragActive ?? false;
+  state.ui.suppressBackdropClick = options.suppressBackdropClick ?? false;
+  state.ui.closing = options.closing ?? false;
+  return state;
 }

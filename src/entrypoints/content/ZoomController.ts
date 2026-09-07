@@ -1,5 +1,11 @@
 import type { OverlayState } from '@/types/overlayTypes';
-import { clampPan, resizeZoom, viewportBounds, zoomAroundAnchor, type Dimensions } from '@/viewer/geometry';
+import {
+  clampPan,
+  resizeZoom,
+  viewportBounds,
+  zoomAroundAnchor,
+  type Dimensions,
+} from '@/viewer/geometry';
 
 const SCALE_EPSILON = 0.0001;
 const TRANSLATION_EPSILON = 0.5;
@@ -78,7 +84,10 @@ export class ZoomController {
     const next = zoomAroundAnchor(
       state.zoom,
       state.pan,
-      { x: clientX - this.windowRef.innerWidth / 2, y: clientY - this.windowRef.innerHeight / 2 },
+      {
+        x: clientX - this.windowRef.innerWidth / 2,
+        y: clientY - this.windowRef.innerHeight / 2,
+      },
       factor,
     );
     if (!next) return;
@@ -150,7 +159,9 @@ export class ZoomController {
     options: { clampTranslation?: boolean } = {},
   ): void {
     if (options.clampTranslation) {
-      state.pan = clampPan(state.pan, this.imageDimensions(state), this.getViewportBounds(), state.zoom.scale);
+      state.pan = clampPan(
+        state.pan, this.imageDimensions(state), this.getViewportBounds(), state.zoom.scale,
+      );
     }
 
     state.elements.shell.style.transform =
@@ -169,7 +180,9 @@ export class ZoomController {
   }
 
   private updateZoomBounds(state: OverlayState): void {
-    state.zoom = resizeZoom(state.zoom, this.imageDimensions(state), this.getViewportBounds(), this.maxZoomMultiplier);
+    state.zoom = resizeZoom(
+      state.zoom, this.imageDimensions(state), this.getViewportBounds(), this.maxZoomMultiplier,
+    );
   }
 
   private imageDimensions(state: OverlayState): Dimensions {

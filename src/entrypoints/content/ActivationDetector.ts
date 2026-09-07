@@ -58,7 +58,10 @@ export class ActivationDetector {
   }
 
   matchesToggleControls(event: KeyboardEvent): boolean {
-    if (this.isEditing(event) || event.repeat || event.ctrlKey || event.metaKey || event.altKey) {
+    if (
+      this.isEditing(event) || event.repeat ||
+      event.ctrlKey || event.metaKey || event.altKey
+    ) {
       return false;
     }
 
