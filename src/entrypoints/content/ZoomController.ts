@@ -1,8 +1,7 @@
-import { clamp } from '@/utils/math';
-import type { OverlayState, ViewportBounds } from '@/types/overlayTypes';
+import type { OverlayState } from '@/types/overlayTypes';
+import { clampPan, resizeZoom, viewportBounds, zoomAroundAnchor, type Dimensions } from '@/viewer/geometry';
 
 const SCALE_EPSILON = 0.0001;
-const SCALE_CHANGE_EPSILON = 0.00001;
 const TRANSLATION_EPSILON = 0.5;
 
 type ZoomControllerOptions = {
@@ -56,14 +55,8 @@ export class ZoomController {
       1,
     );
 
-    state.zoom.fitScale = this.computeFitScale(state);
-    state.zoom.minScale = state.zoom.fitScale;
-    state.zoom.maxScale = state.zoom.fitScale * this.maxZoomMultiplier;
-    state.zoom.scale = state.zoom.fitScale;
-    state.pan.translateX = 0;
-    state.pan.translateY = 0;
-
-    this.applyTransform(state, { clampTranslation: true });
+    this.updateZoomBounds(state);
+    this.resetView(state);
   }
 
   resize(state: OverlayState): void {
@@ -71,14 +64,7 @@ export class ZoomController {
       return;
     }
 
-    state.zoom.fitScale = this.computeFitScale(state);
-    state.zoom.minScale = state.zoom.fitScale;
-    state.zoom.maxScale = state.zoom.fitScale * this.maxZoomMultiplier;
-    state.zoom.scale = clamp(
-      state.zoom.scale,
-      state.zoom.minScale,
-      state.zoom.maxScale,
-    );
+    this.updateZoomBounds(state);
 
     this.applyTransform(state, { clampTranslation: true });
   }
@@ -89,23 +75,15 @@ export class ZoomController {
     clientY: number,
     factor: number,
   ): void {
-    const prevScale = state.zoom.scale;
-    const nextScale = clamp(
-      prevScale * factor,
-      state.zoom.minScale,
-      state.zoom.maxScale,
+    const next = zoomAroundAnchor(
+      state.zoom,
+      state.pan,
+      { x: clientX - this.windowRef.innerWidth / 2, y: clientY - this.windowRef.innerHeight / 2 },
+      factor,
     );
-    if (Math.abs(nextScale - prevScale) < SCALE_CHANGE_EPSILON) {
-      return;
-    }
-
-    const dx = clientX - this.windowRef.innerWidth / 2;
-    const dy = clientY - this.windowRef.innerHeight / 2;
-    const ratio = nextScale / prevScale;
-
-    state.pan.translateX = dx - (dx - state.pan.translateX) * ratio;
-    state.pan.translateY = dy - (dy - state.pan.translateY) * ratio;
-    state.zoom.scale = nextScale;
+    if (!next) return;
+    state.pan = next.pan;
+    state.zoom.scale = next.scale;
 
     this.scheduleTransform(state, { clampTranslation: true });
   }
@@ -172,7 +150,7 @@ export class ZoomController {
     options: { clampTranslation?: boolean } = {},
   ): void {
     if (options.clampTranslation) {
-      this.clampTranslation(state);
+      state.pan = clampPan(state.pan, this.imageDimensions(state), this.getViewportBounds(), state.zoom.scale);
     }
 
     state.elements.shell.style.transform =
@@ -190,40 +168,19 @@ export class ZoomController {
     this.updateButtonState(state);
   }
 
-  private computeFitScale(state: OverlayState): number {
-    if (state.image.naturalWidth <= 0 || state.image.naturalHeight <= 0) {
-      return 1;
-    }
+  private updateZoomBounds(state: OverlayState): void {
+    state.zoom = resizeZoom(state.zoom, this.imageDimensions(state), this.getViewportBounds(), this.maxZoomMultiplier);
+  }
 
-    const bounds = this.getViewportBounds();
-    return Math.min(
-      bounds.width / state.image.naturalWidth,
-      bounds.height / state.image.naturalHeight,
-      1,
+  private imageDimensions(state: OverlayState): Dimensions {
+    return { width: state.image.naturalWidth, height: state.image.naturalHeight };
+  }
+
+  private getViewportBounds(): Dimensions {
+    return viewportBounds(
+      { width: this.windowRef.innerWidth, height: this.windowRef.innerHeight },
+      { width: this.viewportPaddingX, height: this.viewportPaddingY },
     );
-  }
-
-  private clampTranslation(state: OverlayState): void {
-    if (state.image.naturalWidth <= 0 || state.image.naturalHeight <= 0) {
-      return;
-    }
-
-    const bounds = this.getViewportBounds();
-    const renderedWidth = state.image.naturalWidth * state.zoom.scale;
-    const renderedHeight = state.image.naturalHeight * state.zoom.scale;
-
-    const maxX = Math.max(0, (renderedWidth - bounds.width) / 2);
-    const maxY = Math.max(0, (renderedHeight - bounds.height) / 2);
-
-    state.pan.translateX = clamp(state.pan.translateX, -maxX, maxX);
-    state.pan.translateY = clamp(state.pan.translateY, -maxY, maxY);
-  }
-
-  private getViewportBounds(): ViewportBounds {
-    return {
-      width: Math.max(120, this.windowRef.innerWidth - this.viewportPaddingX),
-      height: Math.max(120, this.windowRef.innerHeight - this.viewportPaddingY),
-    };
   }
 
   private updateButtonState(state: OverlayState): void {

@@ -1,4 +1,5 @@
 import type { ThemeSettings } from '@/utils/settings';
+import type { Pan, Zoom } from '@/viewer/geometry';
 
 export type OverlayElements = {
   overlay: HTMLDivElement;
@@ -15,16 +16,8 @@ export type OverlayElements = {
 
 export type OverlayState = {
   elements: OverlayElements;
-  zoom: {
-    scale: number;
-    fitScale: number;
-    minScale: number;
-    maxScale: number;
-  };
-  pan: {
-    translateX: number;
-    translateY: number;
-  };
+  zoom: Zoom;
+  pan: Pan;
   drag: {
     active: boolean;
     startX: number;
@@ -67,9 +60,4 @@ export type OverlayEventHandlers = {
   onResize: () => void;
   onImageLoad: () => void;
   onImageError: () => void;
-};
-
-export type ViewportBounds = {
-  width: number;
-  height: number;
 };
