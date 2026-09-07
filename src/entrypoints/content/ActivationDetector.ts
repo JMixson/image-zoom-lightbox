@@ -26,10 +26,22 @@ export class ActivationDetector {
     if (
       this.shortcutSettings.activationShortcut !== settings.activationShortcut
     ) {
-      this.lastActivationTs = null;
+      this.reset();
     }
 
     this.shortcutSettings = settings;
+  }
+
+  reset(): void {
+    this.lastActivationTs = null;
+  }
+
+  private isEditing(event: KeyboardEvent): boolean {
+    return (
+      event.isComposing ||
+      this.isEditableTarget(event.target) ||
+      event.composedPath().some(target => this.isEditableTarget(target))
+    );
   }
 
   isEditableTarget(target: EventTarget | null): boolean {
@@ -46,7 +58,7 @@ export class ActivationDetector {
   }
 
   matchesToggleControls(event: KeyboardEvent): boolean {
-    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) {
+    if (this.isEditing(event) || event.repeat || event.ctrlKey || event.metaKey || event.altKey) {
       return false;
     }
 
@@ -55,23 +67,30 @@ export class ActivationDetector {
   }
 
   shouldActivate(event: KeyboardEvent): boolean {
+    if (this.isEditing(event)) {
+      this.reset();
+      return false;
+    }
+
+    // Holding the modifier must neither activate nor extend the first press.
+    if (event.repeat) {
+      return false;
+    }
+
     if (!this.isActivationShortcutEvent(event)) {
+      this.reset();
       return false;
     }
 
     const now = this.performanceRef.now();
     const delta =
       this.lastActivationTs === null ? Number.POSITIVE_INFINITY : now - this.lastActivationTs;
-    this.lastActivationTs = now;
-
-    return delta <= this.doubleActivationMs;
+    const activated = delta <= this.doubleActivationMs;
+    this.lastActivationTs = activated ? null : now;
+    return activated;
   }
 
   private isActivationShortcutEvent(event: KeyboardEvent): boolean {
-    if (event.repeat) {
-      return false;
-    }
-
     switch (this.shortcutSettings.activationShortcut) {
       case 'double_shift':
         return (

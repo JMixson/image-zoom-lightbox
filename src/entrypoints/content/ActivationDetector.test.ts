@@ -13,6 +13,41 @@ function createDetector(nowRef: { value: number }): ActivationDetector {
 }
 
 describe('ActivationDetector', () => {
+  it('consumes each pair and resets on intervening input or composition', () => {
+    const detector = createDetector({ value: 100 });
+    const press = (init: KeyboardEventInit = { key: 'Control' }) =>
+      detector.shouldActivate(new KeyboardEvent('keydown', init));
+
+    expect(press()).toBe(false);
+    expect(press()).toBe(true);
+    expect(press()).toBe(false);
+    expect(press({ key: 'a', ctrlKey: true })).toBe(false);
+    expect(press()).toBe(false);
+    expect(press({ key: 'Control', isComposing: true })).toBe(false);
+    expect(press()).toBe(false);
+    detector.reset();
+    expect(press()).toBe(false);
+  });
+
+  it('ignores activation and control toggles from a shadow-root editor', () => {
+    const detector = createDetector({ value: 100 });
+    const host = document.createElement('div');
+    const editor = document.createElement('input');
+    host.attachShadow({ mode: 'open' }).append(editor);
+    document.body.append(host);
+    const results: boolean[] = [];
+    host.addEventListener('keydown', event => {
+      expect(event.target).toBe(host);
+      results.push(detector.shouldActivate(event));
+      expect(detector.matchesToggleControls(event)).toBe(false);
+    });
+    for (const key of ['Control', 'Control', 'h']) {
+      editor.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true }));
+    }
+    expect(results).toEqual([false, false, false]);
+    expect(detector.shouldActivate(new KeyboardEvent('keydown', { key: 'Control' }))).toBe(false);
+  });
+
   it('requires two presses within the configured threshold', () => {
     const nowRef = { value: 100 };
     const detector = createDetector(nowRef);

@@ -288,8 +288,7 @@ export default defineContentScript({
       if (
         overlayState &&
         overlayBuilder &&
-        activationDetector.matchesToggleControls(event) &&
-        !activationDetector.isEditableTarget(event.target)
+        activationDetector.matchesToggleControls(event)
       ) {
         event.preventDefault();
         overlayBuilder.toggleControlsVisibility(overlayState);
@@ -323,6 +322,9 @@ export default defineContentScript({
     ctx.addEventListener(window, 'keydown', onGlobalKeyDown, {
       capture: true,
     });
+    for (const eventName of ['blur', 'focusin', 'compositionstart'] as const) {
+      ctx.addEventListener(window, eventName, () => activationDetector.reset());
+    }
 
     const stopWatchingSettings = settingsManager.startWatching();
 
